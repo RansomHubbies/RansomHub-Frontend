@@ -36,13 +36,6 @@ jobs:
         run: npm install
         working-directory: ./ransomhub
 
-      # - name: Install PM2
-      #   run: npm install -g pm2
-      #   working-directory: ./ransomhub
-
-      # - name: Run Tests
-      #   run: npm test -- --watchAll=false
-
       - name: Build Project
         run: npm run build
         working-directory: ./ransomhub
@@ -52,7 +45,7 @@ jobs:
           pm2 delete all || echo "No existing PM2 processes to stop."
 
       - name: Start Project with PM2
-        run: pm2 start npm --name "ransomhub-app" -- start
+        run: pm2 start npm --name "ransomhub-app" -- start -- -p 3000
         working-directory: ./ransomhub
 
       - name: Save PM2 Process List
