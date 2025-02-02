@@ -44,5 +44,5 @@ jobs:
         working-directory: ./ransomhub
 
       - name: Run Project
-        run: npm run start
+        run: nohup npm start &
         working-directory: ./ransomhub
