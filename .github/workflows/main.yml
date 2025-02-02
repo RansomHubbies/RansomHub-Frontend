@@ -43,6 +43,13 @@ jobs:
         run: npm run build
         working-directory: ./ransomhub
 
-      - name: Run Project
-        run: nohup npm start &
+      - name: Stop Existing PM2 Process (if any)
+        run: |
+          pm2 delete all || echo "No existing PM2 processes to stop."
+
+      - name: Start Project with PM2
+        run: pm2 start npm --name "ransomhub-app" -- start
         working-directory: ./ransomhub
+
+      - name: Save PM2 Process List
+        run: pm2 save
