@@ -48,7 +48,7 @@ jobs:
         run: pm2 delete all || echo "No existing PM2 processes to stop."
 
       - name: Start or Restart Project with PM2
-        run: pm2 start npm --name "ransomhub-app" -- start -- -p 3000
+        run: RUNNER_TRACKING_ID="" && pm2 start npm --name "ransomhub-app" -- start -- -p 3000
         working-directory: ./ransomhub
 
       - name: Save PM2 Process List
