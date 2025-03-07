@@ -65,6 +65,15 @@ export default function SignupPage() {
             />
           </label>
           <label className="block mt-4">
+            <span className="text-gray-700">Mobile Number</span>
+            <input
+              type="text"
+              {...register("phone", { required: true })}
+              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-gray-500 focus:outline-none focus:ring-0 focus:border-transparent"
+              placeholder="Enter your Phone Number"
+            />
+          </label>
+          <label className="block mt-4">
             <span className="text-gray-700">Password</span>
             <input
               type="password"
