@@ -2,73 +2,91 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
+import { useRouter } from "next/navigation"; 
+import { login } from "../../api"; 
 
 export default function LoginPage() {
-  const { register, handleSubmit } = useForm();
+  const { register, handleSubmit, formState: { errors } } = useForm();
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(""); 
+  const router = useRouter(); 
 
-  const onSubmit = (data: any) => {
+  const onSubmit = async (data: any) => {
     setLoading(true);
-    console.log("Login Data:", data);
-    setTimeout(() => setLoading(false), 2000);
+    setErrorMessage("");
+
+    try {
+      const result = await login(data.email, data.password);
+      console.log("Token received:", result.token);
+
+      if (result.token) {
+        router.push("/");  
+      } else {
+        setErrorMessage(result.error || "Login failed. Please try again.");
+      }
+    } catch (error) {
+      setErrorMessage("Something went wrong. Please try again.");
+      console.error("API Error:", error);
+    }
+
+    setLoading(false);
   };
-//   const onSubmit = async (data: any) => {
-//     setLoading(true);
-//     try {
-//       const res = await fetch("https://your-backend.com/api/login", {
-//         method: "POST",
-//         headers: { "Content-Type": "application/json" },
-//         body: JSON.stringify(data),
-//       });
-//       const result = await res.json();
-//       console.log(result);
-//     } catch (error) {
-//       console.error("API Error:", error);
-//     }
-//     setLoading(false);
-//   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100" style={{
+    <div className="flex items-center justify-center min-h-screen bg-gray-100"
+      style={{
         backgroundImage: "url('/background.png')",
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
         minHeight: "100vh",
         width: "100vw",
-      }}>
+      }}
+    >
       <div className="w-full max-w-md bg-white shadow-lg rounded-lg p-6">
         <h2 className="text-2xl font-bold text-center text-gray-700">Login</h2>
+        
+        {errorMessage && (
+          <p className="text-red-500 text-sm text-center mt-2">{errorMessage}</p>
+        )}
+
         <form onSubmit={handleSubmit(onSubmit)} className="mt-4">
           <label className="block">
             <span className="text-gray-700">Email</span>
             <input
               type="email"
-              {...register("email", { required: true })}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-gray-500 focus:outline-none focus:ring-0 focus:border-transparent" 
+              {...register("email", { required: "Email is required", pattern: /^\S+@\S+\.\S+$/ })}
+              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               placeholder="Enter your email"
             />
+            {errors.email && <p className="text-red-500 text-xs">{String(errors.email.message)}</p>}
           </label>
+
           <label className="block mt-4">
             <span className="text-gray-700">Password</span>
             <input
               type="password"
-              {...register("password", { required: true })}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-gray-500 focus:outline-none focus:ring-0 focus:border-transparent"
+              {...register("password", { required: "Password is required", minLength: 6 })}
+              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               placeholder="Enter your password"
             />
+            
+            {errors.password && <p className="text-red-500 text-xs">{String(errors.password.message)}</p>}
+
           </label>
+
           <button
             type="submit"
-            className="mt-4 w-full bg-blue-600 text-white py-2 rounded-md"
+            className="mt-4 w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition duration-200"
             disabled={loading}
           >
             {loading ? "Logging in..." : "Login"}
           </button>
         </form>
+
         <p className="mt-4 text-center text-sm text-gray-800">
           Don't have an account?{" "}
-          <Link href="/auth/signup" className="text-blue-600">
+          <Link href="/auth/signup" className="text-blue-600 hover:underline">
             Sign up
           </Link>
         </p>
