@@ -15,13 +15,14 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-
-      - name: Ensure Latest Code is Pulled
-        run: |
-          cd /var/www/RansomHub-Frontend/ransomhub
-          git fetch origin main
-          git reset --hard origin/main
-          git pull origin main
+        with:
+          path: /var/www/RansomHub-Frontend
+      # - name: Ensure Latest Code is Pulled
+      #   run: |
+      #     cd /var/www/RansomHub-Frontend/ransomhub
+      #     git fetch origin main
+      #     git reset --hard origin/main
+      #     git pull origin main
 
       - name: Use Node.js 18 LTS
         uses: actions/setup-node@v3
