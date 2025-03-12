@@ -56,7 +56,7 @@ export default function SignupPage() {
             />
           </label>
           <label className="block mt-4">
-            <span className="text-gray-700">Email</span>
+            <span className="text-gray-700">E-mail</span>
             <input
               type="email"
               {...register("email", { required: true })}
