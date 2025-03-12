@@ -50,7 +50,7 @@ export default function LoginPage() {
             />
           </label>
           <label className="block mt-4">
-            <span className="text-gray-700">Password</span>
+            <span className="text-gray-700">Password is what</span>
             <input
               type="password"
               {...register("password", { required: true })}
