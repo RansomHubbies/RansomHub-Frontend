@@ -15,14 +15,12 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          path: /var/www/RansomHub-Frontend
-      # - name: Ensure Latest Code is Pulled
-      #   run: |
-      #     cd /var/www/RansomHub-Frontend/ransomhub
-      #     git fetch origin main
-      #     git reset --hard origin/main
-      #     git pull origin main
+        
+      - name: Copy Updated Code to /var/www/
+        run: |
+          sudo rsync -av --delete RansomHub-Frontend/ /var/www/RansomHub-Frontend/
+          sudo chown -R iiitd:iiitd /var/www/RansomHub-Frontend/
+      
 
       - name: Use Node.js 18 LTS
         uses: actions/setup-node@v3
