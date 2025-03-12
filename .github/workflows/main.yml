@@ -15,12 +15,13 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        
-      - name: Copy Updated Code to /var/www/
-        run: |
-          sudo rsync -av --delete RansomHub-Frontend/ /var/www/RansomHub-Frontend/
-          sudo chown -R iiitd:iiitd /var/www/RansomHub-Frontend/
-      
+
+      - name: Verify Directory Exists
+        run: ls -la ${{ github.workspace }}/RansomHub-Frontend
+
+      - name: Sync Files to /var/www
+        run: sudo rsync -av --delete ${{ github.workspace }}/RansomHub-Frontend/ /var/www/RansomHub-Frontend/
+
 
       - name: Use Node.js 18 LTS
         uses: actions/setup-node@v3
