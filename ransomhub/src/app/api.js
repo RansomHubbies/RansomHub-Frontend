@@ -1,11 +1,11 @@
 const API_URL = "http://127.0.0.1:8000/api/users";
 
-export const signup = async (username, email, password,phone) => {
+export const signup = async (name,username, email, password,phone) => {
     try {
         const response = await fetch(`${API_URL}/signup/`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username, email, password }),
+            body: JSON.stringify({ name,username, email, password, phone }),
         });
         
         const data = await response.json();
@@ -91,7 +91,8 @@ export const login = async (email, password) => {
         console.log("Login API Response:", data);
 
         if (response.status === 200) {
-            localStorage.setItem("token", data.token); 
+            localStorage.setItem("access_token", data.access_token);
+            localStorage.setItem("refresh_token", data.refresh_token);
             return data;
         } else {
             throw new Error(data.error || "Login failed");
@@ -102,19 +103,54 @@ export const login = async (email, password) => {
 };
 
 
-export const logout = async (token) => {
+export const logout = async () => {
     try {
         const response = await fetch(`${API_URL}/logout/`, {
             method: "POST",
             headers: {
-                "Authorization": `Token ${token}`,
                 "Content-Type": "application/json",
+                "Authorization": `Token ${localStorage.getItem("token")}`, // Send the token for authentication
             },
         });
 
-        if (!response.ok) throw new Error("Logout failed");
-        return response.json();
+        const data = await response.json();
+        if (response.status === 200) {
+            localStorage.removeItem("token"); 
+            console.log("Logged out successfully");
+            return data;
+        } else {
+            throw new Error(data.error || "Logout failed");
+        }
     } catch (error) {
-        return { error: error.message || "Something went wrong" };
+        console.error("Logout error:", error);
+    }
+};
+
+const getProtectedData = async () => {
+    const token = localStorage.getItem("access_token");
+    const response = await fetch(`${API_URL}/protected/`, {
+        method: "GET",
+        headers: {
+            "Authorization": `Bearer ${token}`,
+        },
+    });
+    const data = await response.json();
+    return data;
+};
+const refreshAccessToken = async () => {
+    const refresh_token = localStorage.getItem("refresh_token");
+    const response = await fetch(`${API_URL}/token/refresh/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token }),
+    });
+
+    const data = await response.json();
+    if (response.status === 200) {
+        // Store the new access token
+        localStorage.setItem("access_token", data.access_token);
+        return data;
+    } else {
+        throw new Error(data.error || "Failed to refresh token");
     }
 };

@@ -16,21 +16,30 @@ export default function LoginPage() {
     setErrorMessage("");
 
     try {
-      const result = await login(data.email, data.password);
-      console.log("Token received:", result.token);
+        // Calling the login API with email and password
+        const result = await login(data.email, data.password); 
+        console.log("Token received:", result);
 
-      if (result.token) {
-        router.push("/");  
-      } else {
-        setErrorMessage(result.error || "Login failed. Please try again.");
-      }
+        // Check if the login was successful and the access token is received
+        if (result.access_token) {
+            // Save the access token (and optionally refresh token) in localStorage
+            localStorage.setItem("access_token", result.access_token); // Store access token
+            localStorage.setItem("refresh_token", result.refresh_token || ""); // Store refresh token (optional)
+
+            // Redirect to a protected page (home/dashboard)
+            router.push("/");  
+        } else {
+            // If the login failed, show the error message
+            setErrorMessage(result.error || "Login failed. Please try again.");
+        }
     } catch (error) {
-      setErrorMessage("Something went wrong. Please try again.");
-      console.error("API Error:", error);
+        setErrorMessage("Something went wrong. Please try again.");
+        console.error("API Error:", error);
     }
 
     setLoading(false);
-  };
+};
+
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100"
@@ -83,13 +92,19 @@ export default function LoginPage() {
             {loading ? "Logging in..." : "Login"}
           </button>
         </form>
-
-        <p className="mt-4 text-center text-sm text-gray-800">
+        <p className="mt-4 text-sm text-gray-800 text-right">
+          {" "}
+          <Link href="/auth/reset" className="text-blue-600 hover:underline">
+            Reset Password
+          </Link>
+        </p>
+        <p className="mt-0 text-sm text-gray-800 text-right">
           Don't have an account?{" "}
           <Link href="/auth/signup" className="text-blue-600 hover:underline">
             Sign up
           </Link>
         </p>
+        
       </div>
     </div>
   );

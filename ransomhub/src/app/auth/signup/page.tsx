@@ -15,7 +15,7 @@ export default function SignupPage() {
     setLoading(true);
     setErrorMessage("");
     try {
-      const result = await signup(data.name, data.email, data.password, data.phone);
+      const result = await signup(data.name,data.username, data.email, data.password, data.phone);
       console.log(result.token)
       if (result.email) {
         // localStorage.setItem("token", result.token);
@@ -60,6 +60,17 @@ export default function SignupPage() {
               placeholder="Enter your full name"
             />
             {errors.name && <p className="text-red-500 text-xs">{String(errors.name.message)}</p>}
+          </label>
+
+          <label className="block mt-4">
+            <span className="text-gray-700">User Name</span>
+            <input
+              type="text"
+              {...register("username", { required: "User Name is required" })}
+              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter a username"
+            />
+            {errors.username && <p className="text-red-500 text-xs">{String(errors.username.message)}</p>}
           </label>
 
           <label className="block mt-4">
@@ -114,7 +125,7 @@ export default function SignupPage() {
           </button>
         </form>
 
-        <p className="mt-4 text-center text-sm text-gray-800">
+        <p className="mt-4 text-right text-sm text-gray-800">
           Already have an account?{" "}
           <Link href="/auth/login" className="text-blue-600 hover:underline">
             Login
