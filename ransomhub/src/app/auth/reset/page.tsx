@@ -17,6 +17,7 @@ export default function ResetPasswordPage() {
       const response = await fetch("https://127.0.0.1:8000/api/users/send_reset_otp/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ email: data.email }),
       });
   

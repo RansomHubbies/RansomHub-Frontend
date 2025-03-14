@@ -27,6 +27,7 @@ export default function Dashboard() {
           headers: {
             "Content-Type": "application/json",
           },
+          credentials: "include",
           body: JSON.stringify({ refresh: refreshToken }),
         });
 
@@ -68,6 +69,7 @@ export default function Dashboard() {
             headers: {
               "Authorization": `Bearer ${token}`,
             },
+            credentials: "include",
           });
 
           // If access token is expired or invalid, try refreshing
@@ -82,6 +84,7 @@ export default function Dashboard() {
                 headers: {
                   "Authorization": `Bearer ${newToken}`,
                 },
+                credentials: "include",
               });
             }
             else if (!newToken) {
@@ -137,6 +140,7 @@ export default function Dashboard() {
           headers: {
             "Authorization": `Bearer ${token}`,
           },
+          credentials: "include",
           body: formData,
         });
 
@@ -175,6 +179,7 @@ export default function Dashboard() {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`,
         },
+        credentials: "include",
         body: JSON.stringify({ username: newUsername }),
       });
   
@@ -189,6 +194,7 @@ export default function Dashboard() {
               "Content-Type": "application/json",
               "Authorization": `Bearer ${newToken}`,
             },
+            credentials: "include",
             body: JSON.stringify({ username: newUsername }),
           });
   
@@ -231,6 +237,7 @@ export default function Dashboard() {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`,
         },
+        credentials: "include",
       });
 
       if (response.status === 401 || response.status === 403) {
@@ -245,6 +252,7 @@ export default function Dashboard() {
               "Content-Type": "application/json",
               "Authorization": `Bearer ${newToken}`,
             },
+            credentials: "include",
           });
         }
         else if (!newToken) {

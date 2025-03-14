@@ -6,6 +6,7 @@ export const signup = async (name,username, email, password,phone) => {
         const response = await fetch(`${API_URL}/signup/`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            credentials: "include",
             body: JSON.stringify({ name,username, email, password, phone }),
         });
         
@@ -35,6 +36,7 @@ export const verifyOtp = async (email, otp) => {
                 "Content-Type": "application/json",
                 "X-CSRFToken": csrfToken,  
             },
+            credentials: "include",
             body: JSON.stringify({ email, otp }),
         });
 
@@ -61,6 +63,7 @@ export const resendOtp = async (email) => {
         const response = await fetch(`${API_URL}/resend-otp/`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            credentials: "include",
             body: JSON.stringify({ email }),
         });
 
@@ -85,6 +88,7 @@ export const login = async (email, password) => {
         const response = await fetch(`${API_URL}/login/`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            credentials: "include",
             body: JSON.stringify({ email, password }),
         });
 
@@ -112,6 +116,7 @@ export const logout = async () => {
                 "Content-Type": "application/json",
                 "Authorization": `Token ${localStorage.getItem("token")}`, // Send the token for authentication
             },
+            credentials: "include",
         });
 
         const data = await response.json();
@@ -134,6 +139,7 @@ const getProtectedData = async () => {
         headers: {
             "Authorization": `Bearer ${token}`,
         },
+        credentials: "include",
     });
     const data = await response.json();
     return data;
@@ -143,6 +149,7 @@ const refreshAccessToken = async () => {
     const response = await fetch(`${API_URL}/token/refresh/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ refresh_token }),
     });
 

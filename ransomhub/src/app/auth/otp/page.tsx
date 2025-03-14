@@ -51,6 +51,7 @@ export default function OtpPage() {
       const res = await fetch("https://127.0.0.1:8000/api/users/resendotp/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ email }),
       });
 
