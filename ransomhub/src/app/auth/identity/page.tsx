@@ -36,7 +36,7 @@ function VerifyIdentityForm({ email }: { email: string | null }) {
     setErrorMessage("");
 
     try {
-      const response = await fetch("http://192.168.2.233/api/users/identityverify/", {
+      const response = await fetch("https://192.168.2.233/api/users/identityverify/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

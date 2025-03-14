@@ -48,7 +48,7 @@ export default function OtpPage() {
     setErrorMessage(""); // Reset error message
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/users/resendotp/", {
+      const res = await fetch("https://127.0.0.1:8000/api/users/resendotp/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
