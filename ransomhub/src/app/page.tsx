@@ -116,23 +116,101 @@ export default function Dashboard() {
     }
   }, [router]); // Trigger when the component is mounted or when `router` changes
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+      const formData = new FormData();
+      formData.append("profile_image", file);
 
-  const handleUsernameUpdate = () => {
-    if (newUsername.trim() !== "") {
-      setUsername(newUsername);
-      setEditingUsername(false);
+      setLoading(true);
+      try {
+        const token = localStorage.getItem("access_token");
+        if (!token) {
+          setError("User is not authenticated.");
+          return;
+        }
+
+        const response = await fetch("http://127.0.0.1:8000/api/users/upload_image/", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setProfileImage(data.profileImage);
+        } else {
+          setError("Failed to upload image.");
+        }
+      } catch (error) {
+        setError("Failed to upload image.");
+      } finally {
+        setLoading(false);
+      }
     }
   };
+  const handleUsernameUpdate = async () => {
+    if (newUsername.trim() === "" || newUsername === username) {
+      setEditingUsername(false);
+      return;
+    }
+  
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("access_token");
+  
+      if (!token) {
+        setError("User is not authenticated.");
+        router.push("/auth/login");
+        return;
+      }
+  
+      const response = await fetch("http://127.0.0.1:8000/api/users/update_username/", {
+        method: "PATCH", 
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ username: newUsername }),
+      });
+  
+      if (response.status === 401 || response.status === 403) {
+        await refreshAccessToken();
+  
+        const newToken = localStorage.getItem("access_token");
+        if (newToken) {
+          const retryResponse = await fetch("http://127.0.0.1:8000/api/users/update_username/", {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${newToken}`,
+            },
+            body: JSON.stringify({ username: newUsername }),
+          });
+  
+          if (!retryResponse.ok) {
+            throw new Error("Failed to update username.");
+          }
+        } else {
+          router.push("/auth/login");
+        }
+      } else if (!response.ok) {
+        throw new Error("Failed to update username.");
+      }
+  
+      const data = await response.json();
+      setUsername(data.username);
+      setNewUsername(""); // Clear input field
+      setEditingUsername(false);
+    } catch (error) {
+      setError("Failed to update username.");
+    } finally {
+      setLoading(false);
+    }
+  };
+  
 
   const handleLogout = async () => {
     setLoading(true);
