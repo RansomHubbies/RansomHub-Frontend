@@ -2,17 +2,17 @@
 const API_URL = "https://192.168.2.233/api/users";
 
 
-  const getCSRFTokenFromCookie = () => {
+export const getCSRFTokenFromCookie = () => {
     const cookie = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("csrftoken="));
-  
+        .split("; ")
+        .find((row) => row.startsWith("csrftoken="));
+
     if (cookie) {
-      return cookie.split("=")[1];
+        return cookie.split("=")[1];
     }
     console.error("CSRF token not found in cookies.");
-    return null; 
-  };
+    return ""; 
+};
 export const signup = async (name,username, email, password,phone) => {
     try {
         const csrfToken = getCSRFTokenFromCookie();
@@ -38,11 +38,7 @@ export const signup = async (name,username, email, password,phone) => {
 
 export const verifyOtp = async (email, otp) => {
     try {
-        const csrfToken = document.cookie
-            .split('; ')
-            .find(row => row.startsWith('csrftoken='))
-            ?.split('=')[1];  
-
+        const csrfToken = getCSRFTokenFromCookie();  
         const response = await fetch(`${API_URL}/verifyotp/`, {
             method: "POST",
             headers: {
@@ -73,9 +69,10 @@ export const verifyOtp = async (email, otp) => {
 
 export const resendOtp = async (email) => {
     try {
+        const csrfToken = getCSRFTokenFromCookie();
         const response = await fetch(`${API_URL}/resend-otp/`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json","X-CSRFToken": csrfToken, },
             credentials: "include",
             body: JSON.stringify({ email }),
         });
@@ -98,9 +95,10 @@ export const resendOtp = async (email) => {
 
 export const login = async (email, password) => {
     try {
+        const csrfToken = getCSRFTokenFromCookie();
         const response = await fetch(`${API_URL}/login/`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken, },
             credentials: "include",
             body: JSON.stringify({ email, password }),
         });
@@ -123,11 +121,13 @@ export const login = async (email, password) => {
 
 export const logout = async () => {
     try {
+        const csrfToken = getCSRFTokenFromCookie();
         const response = await fetch(`${API_URL}/logout/`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Token ${localStorage.getItem("token")}`, // Send the token for authentication
+                "Authorization": `Token ${localStorage.getItem("token")}`,
+                "X-CSRFToken": csrfToken, // Send the token for authentication
             },
             credentials: "include",
         });
@@ -146,11 +146,13 @@ export const logout = async () => {
 };
 
 const getProtectedData = async () => {
+    const csrfToken = getCSRFTokenFromCookie();
     const token = localStorage.getItem("access_token");
     const response = await fetch(`${API_URL}/protected/`, {
         method: "GET",
         headers: {
             "Authorization": `Bearer ${token}`,
+            "X-CSRFToken": csrfToken,
         },
         credentials: "include",
     });
@@ -158,10 +160,11 @@ const getProtectedData = async () => {
     return data;
 };
 const refreshAccessToken = async () => {
+    const csrfToken = getCSRFTokenFromCookie();
     const refresh_token = localStorage.getItem("refresh_token");
     const response = await fetch(`${API_URL}/token/refresh/`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken, },
         credentials: "include",
         body: JSON.stringify({ refresh_token }),
     });

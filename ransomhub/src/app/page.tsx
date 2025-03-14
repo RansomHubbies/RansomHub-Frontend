@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { FiEdit2 } from "react-icons/fi"; // Edit icon
 import { MdCloudUpload } from "react-icons/md"; // Upload icon
 import Link from "next/link";
+import { getCSRFTokenFromCookie } from "./api";
 
 export default function Dashboard() {
   const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -14,18 +15,20 @@ export default function Dashboard() {
   const [editingUsername, setEditingUsername] = useState(false);
   const [newUsername, setNewUsername] = useState<string>("");
   const router = useRouter();
-
+  
   // Token refresh function
   const refreshAccessToken = async () => {
     const refreshToken = localStorage.getItem("refresh_token");
 
     if (refreshToken) {
       try {
+        const csrfToken = getCSRFTokenFromCookie();
         // const response = await fetch("http://127.0.0.1:8000/api/users/refresh/", {
         const response = await fetch("https://192.168.2.233/api/users/refresh/", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "X-CSRFToken": csrfToken,
           },
           credentials: "include",
           body: JSON.stringify({ refresh: refreshToken }),
@@ -55,19 +58,20 @@ export default function Dashboard() {
   useEffect(() => {
     const token = localStorage.getItem("access_token");
     const refreshToken = localStorage.getItem("refresh_token");
-
     if (!token || !refreshToken) {
       router.push("/auth/login"); // Redirect to login if no token is found
     } else {
       // Fetch user data
       const fetchUserData = async () => {
         try {
+          const csrfToken = getCSRFTokenFromCookie();
           setLoading(true);
           let response = await fetch("https://192.168.2.233/api/users/profile", {
           
             method: "GET",
             headers: {
               "Authorization": `Bearer ${token}`,
+              "X-CSRFToken": csrfToken,
             },
             credentials: "include",
           });
@@ -79,10 +83,12 @@ export default function Dashboard() {
             // Retry fetching the user data with the new token
             const newToken = localStorage.getItem("access_token");
             if (newToken) {
+              const csrfToken = getCSRFTokenFromCookie();
               response = await fetch("https://192.168.2.233/api/users/profile", {
                 method: "GET",
                 headers: {
                   "Authorization": `Bearer ${newToken}`,
+                  "X-CSRFToken": csrfToken,
                 },
                 credentials: "include",
               });
@@ -134,11 +140,12 @@ export default function Dashboard() {
           setError("User is not authenticated.");
           return;
         }
-
+        const csrfToken = getCSRFTokenFromCookie();
         const response = await fetch("https://192.168.2.233/api/users/upload_image/", {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${token}`,
+            "X-CSRFToken": csrfToken,
           },
           credentials: "include",
           body: formData,
@@ -172,12 +179,13 @@ export default function Dashboard() {
         router.push("/auth/login");
         return;
       }
-  
+      const csrfToken = getCSRFTokenFromCookie();
       const response = await fetch("https://192.168.2.233/api/users/update_username/", {
         method: "PATCH", 
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`,
+          "X-CSRFToken": csrfToken,
         },
         credentials: "include",
         body: JSON.stringify({ username: newUsername }),
@@ -188,11 +196,13 @@ export default function Dashboard() {
   
         const newToken = localStorage.getItem("access_token");
         if (newToken) {
+          const csrfToken = getCSRFTokenFromCookie();
           const retryResponse = await fetch("https://192.168.2.233/api/users/update_username/", {
             method: "PATCH",
             headers: {
               "Content-Type": "application/json",
               "Authorization": `Bearer ${newToken}`,
+              "X-CSRFToken": csrfToken,
             },
             credentials: "include",
             body: JSON.stringify({ username: newUsername }),
@@ -230,12 +240,13 @@ export default function Dashboard() {
         router.push("/auth/login");
         return;
       }
-
+      const csrfToken = getCSRFTokenFromCookie();
       let response = await fetch("https://192.168.2.233/api/users/logout/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`,
+          "X-CSRFToken": csrfToken,
         },
         credentials: "include",
       });
@@ -246,11 +257,13 @@ export default function Dashboard() {
         const newToken = localStorage.getItem("access_token");
 
         if (newToken) {
+          const csrfToken = getCSRFTokenFromCookie();
           response = await fetch("https://192.168.2.233/api/users/logout/", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
               "Authorization": `Bearer ${newToken}`,
+              "X-CSRFToken": csrfToken,
             },
             credentials: "include",
           });

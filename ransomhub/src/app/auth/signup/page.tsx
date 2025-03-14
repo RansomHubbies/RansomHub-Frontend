@@ -10,7 +10,7 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const router = useRouter();
-  
+
   const onSubmit = async (data: any) => {
     setLoading(true);
     setErrorMessage("");
