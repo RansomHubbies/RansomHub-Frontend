@@ -1,30 +1,42 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter, useSearchParams } from "next/navigation";
 
 export default function VerifyIdentityPage() {
-  const { register, handleSubmit, formState: { errors }, watch } = useForm();
-  const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <IdentityPageContent />
+    </Suspense>
+  );
+}
 
-  // Extract email from query parameters or localStorage
+function IdentityPageContent() {
+  const searchParams = useSearchParams(); // ✅ Now inside Suspense
+  const router = useRouter();
   const email = searchParams.get("email") || localStorage.getItem("otpEmail");
 
   useEffect(() => {
     if (!email) {
-      router.push("/auth/reset"); // Redirect if no email found
+      router.push("/auth/reset");
     }
   }, [router, email]);
+
+  return <VerifyIdentityForm email={email} />;
+}
+
+function VerifyIdentityForm({ email }: { email: string | null }) {
+  const { register, handleSubmit, formState: { errors }, watch } = useForm();
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const router = useRouter();
 
   const onSubmit = async (data: any) => {
     setLoading(true);
     setErrorMessage("");
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/users/identityverify/", {
+      const response = await fetch("http://192.168.2.233/api/users/identityverify/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
