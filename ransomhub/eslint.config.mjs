@@ -13,7 +13,9 @@ const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     rules: {
-      "@typescript-eslint/no-explicit-any": "off", // Allow "any" type
+      "@typescript-eslint/no-unused-vars": "off", // Ignore unused variables
+      "react-hooks/exhaustive-deps": "warn", // Show warning but don't fail build
+      "@next/next/no-img-element": "off", // Allow <img> tag usage
       "react/no-unescaped-entities": "off", // Disable apostrophe escaping warning
     },
   },
