@@ -1,11 +1,24 @@
 // const API_URL = "http://127.0.0.1:8000/api/users";
 const API_URL = "https://192.168.2.233/api/users";
 
+
+  const getCSRFTokenFromCookie = () => {
+    const cookie = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("csrftoken="));
+  
+    if (cookie) {
+      return cookie.split("=")[1];
+    }
+    console.error("CSRF token not found in cookies.");
+    return null; 
+  };
 export const signup = async (name,username, email, password,phone) => {
     try {
+        const csrfToken = getCSRFTokenFromCookie();
         const response = await fetch(`${API_URL}/signup/`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json","X-CSRFToken": csrfToken, },
             credentials: "include",
             body: JSON.stringify({ name,username, email, password, phone }),
         });
