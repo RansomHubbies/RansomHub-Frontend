@@ -1,46 +1,30 @@
 "use client";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { useRouter } from "next/navigation"; 
+import { useRouter } from "next/navigation";
+import { sendResetOtp } from "../../api"; 
 
 export default function ResetPasswordPage() {
   const { register, handleSubmit, formState: { errors } } = useForm();
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState(""); 
-  const router = useRouter(); 
+  const [errorMessage, setErrorMessage] = useState("");
+  const router = useRouter();
 
   const onSubmit = async (data: any) => {
     setLoading(true);
     setErrorMessage("");
-  
-    try {
-      const response = await fetch("https://192.168.2.233/api/users/send_reset_otp/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email: data.email }),
-      });
-  
-      const result = await response.json();
-  
-      if (!response.ok) {
-        throw new Error(result.error || "Something went wrong.");
-      }
-  
+
+    const response = await sendResetOtp(data.email);
+
+    if (response.error) {
+      setErrorMessage(response.error);
+    } else {
       localStorage.setItem("otpEmail", data.email);
       router.push(`/auth/identity`);
-    } catch (error) {
-      // ✅ Fix: Explicitly check error type
-      if (error instanceof Error) {
-        setErrorMessage(error.message);
-      } else {
-        setErrorMessage("An unexpected error occurred.");
-      }
     }
-  
+
     setLoading(false);
   };
-  
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100"

@@ -2,69 +2,55 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
-import { verifyOtp } from "@/app/api";
+import { verifyOtp, resendOtp } from "../../api"; 
 
 export default function OtpPage() {
   const { register, handleSubmit, formState: { errors } } = useForm();
   const [loading, setLoading] = useState(false);
   const [resend, setResend] = useState(false);
-  const [errorMessage, setErrorMessage] = useState(""); // Added error state
-  const router = useRouter(); // Redirect after verification
+  const [errorMessage, setErrorMessage] = useState("");
+  const router = useRouter();
   const [email, setEmail] = useState("");
 
   useEffect(() => {
-    const storedEmail = localStorage.getItem("otpEmail");  // ✅ Retrieve stored email
+    const storedEmail = localStorage.getItem("otpEmail");
     if (storedEmail) {
       setEmail(storedEmail);
     } else {
       console.warn("No email found in localStorage. Redirecting to signup.");
-      router.push("/auth/signup");  // ✅ Redirect user if no email is found
+      router.push("/auth/signup");
     }
   }, [router]);
 
   const onSubmit = async (data: any) => {
-      setLoading(true);
-      setErrorMessage("");
-      try {
-        console.log(data.email)
-        const result = await verifyOtp(email, data.otp);
-        console.log(result.token)
-        if (result.email) {
-          localStorage.setItem("token", result.token);
-          localStorage.removeItem("otpEmail");
-          router.push("/");
-        } else {
-          setErrorMessage(result.error || "OTP failed. Please try again.");
-        }
-      } catch (error) {
-        setErrorMessage("Something went wrong. Please try again.");
-        console.error("API Error:", error);
-      }
-      setLoading(false);
-    };
+    setLoading(true);
+    setErrorMessage("");
+
+    const result = await verifyOtp(email, data.otp);
+
+    if (result.token) {
+      localStorage.setItem("token", result.token);
+      localStorage.removeItem("otpEmail");
+      router.push("/");
+    } else {
+      setErrorMessage(result.error || "OTP failed. Please try again.");
+    }
+
+    setLoading(false);
+  };
 
   const handleResend = async () => {
     setResend(true);
-    setErrorMessage(""); // Reset error message
+    setErrorMessage("");
 
-    try {
-      const res = await fetch("https://192.168.2.233/api/users/resendotp/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email }),
-      });
+    const result = await resendOtp(email);
 
-      const result = await res.json();
-      if (result.email) {
-        alert("OTP has been resent to your email.");
-      } else {
-        setErrorMessage(result.error || "Failed to resend OTP.");
-      }
-    } catch (error) {
-      setErrorMessage("Something went wrong. Please try again.");
-      console.error("Resend OTP Error:", error);
+    if (result.error) {
+      setErrorMessage(result.error || "Failed to resend OTP.");
+    } else {
+      alert("OTP has been resent to your email.");
     }
+
     setResend(false);
   };
 
