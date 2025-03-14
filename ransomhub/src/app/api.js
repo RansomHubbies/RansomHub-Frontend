@@ -1,4 +1,5 @@
-const API_URL = "http://127.0.0.1:8000/api/users";
+// const API_URL = "http://127.0.0.1:8000/api/users";
+const API_URL = "http://192.168.2.233/api/users";
 
 export const signup = async (name,username, email, password,phone) => {
     try {

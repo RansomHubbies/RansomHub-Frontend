@@ -21,7 +21,8 @@ export default function Dashboard() {
 
     if (refreshToken) {
       try {
-        const response = await fetch("http://127.0.0.1:8000/api/users/refresh/", {
+        // const response = await fetch("http://127.0.0.1:8000/api/users/refresh/", {
+        const response = await fetch("http://192.168.2.233/api/users/refresh/", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -61,7 +62,8 @@ export default function Dashboard() {
       const fetchUserData = async () => {
         try {
           setLoading(true);
-          let response = await fetch("http://127.0.0.1:8000/api/users/profile", {
+          let response = await fetch("http://192.168.2.233/api/users/profile", {
+          
             method: "GET",
             headers: {
               "Authorization": `Bearer ${token}`,
@@ -75,7 +77,7 @@ export default function Dashboard() {
             // Retry fetching the user data with the new token
             const newToken = localStorage.getItem("access_token");
             if (newToken) {
-              response = await fetch("http://127.0.0.1:8000/api/users/profile", {
+              response = await fetch("http://192.168.2.233/api/users/profile", {
                 method: "GET",
                 headers: {
                   "Authorization": `Bearer ${newToken}`,
@@ -130,7 +132,7 @@ export default function Dashboard() {
           return;
         }
 
-        const response = await fetch("http://127.0.0.1:8000/api/users/upload_image/", {
+        const response = await fetch("http://192.168.2.233/api/users/upload_image/", {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${token}`,
@@ -167,7 +169,7 @@ export default function Dashboard() {
         return;
       }
   
-      const response = await fetch("http://127.0.0.1:8000/api/users/update_username/", {
+      const response = await fetch("http://192.168.2.233/api/users/update_username/", {
         method: "PATCH", 
         headers: {
           "Content-Type": "application/json",
@@ -181,7 +183,7 @@ export default function Dashboard() {
   
         const newToken = localStorage.getItem("access_token");
         if (newToken) {
-          const retryResponse = await fetch("http://127.0.0.1:8000/api/users/update_username/", {
+          const retryResponse = await fetch("http://192.168.2.233/api/users/update_username/", {
             method: "PATCH",
             headers: {
               "Content-Type": "application/json",
@@ -223,7 +225,7 @@ export default function Dashboard() {
         return;
       }
 
-      let response = await fetch("http://127.0.0.1:8000/api/users/logout/", {
+      let response = await fetch("http://192.168.2.233/api/users/logout/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -237,7 +239,7 @@ export default function Dashboard() {
         const newToken = localStorage.getItem("access_token");
 
         if (newToken) {
-          response = await fetch("http://127.0.0.1:8000/api/users/logout/", {
+          response = await fetch("http://192.168.2.233/api/users/logout/", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

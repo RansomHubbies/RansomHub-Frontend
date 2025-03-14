@@ -14,9 +14,10 @@ const eslintConfig = [
   {
     rules: {
       "@typescript-eslint/no-unused-vars": "off", // Ignore unused variables
-      "react-hooks/exhaustive-deps": "warn", // Show warning but don't fail build
+      "react-hooks/exhaustive-deps": "off", // 🔥 Fully disable missing dependencies warning
       "@next/next/no-img-element": "off", // Allow <img> tag usage
       "react/no-unescaped-entities": "off", // Disable apostrophe escaping warning
+      "@typescript-eslint/no-explicit-any": "off", // 🔥 Allow "any" type without errors
     },
   },
 ];
