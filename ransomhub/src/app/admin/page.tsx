@@ -1,33 +1,124 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { FiTrash2, FiUserCheck } from "react-icons/fi"; // Icons
-import { MdBlock } from "react-icons/md"; // Suspend icon
+import { FiTrash2, FiUserCheck } from "react-icons/fi";
+import { MdBlock } from "react-icons/md";
+import { useRouter } from "next/navigation";
+import { fetchUsers, removeUser, toggleUserSuspension,refreshAccessToken  } from "../api";
 
-// Sample user data (Assume this comes from backend)
-const initialUsers = [
-  { id: 1, name: "John Doe", email: "johndoe@example.com", phone: "+1234567890", username: "JohnDoe92", is_verified: true, is_suspended: false },
-  { id: 2, name: "Jane Smith", email: "janesmith@example.com", phone: "+9876543210", username: "JaneSmith88", is_verified: false, is_suspended: false },
-  { id: 3, name: "Michael Johnson", email: "michaelj@example.com", phone: "+1112223333", username: "MikeJ75", is_verified: true, is_suspended: false },
-];
+// Define User interface
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  username: string;
+  is_verified: boolean;
+  is_suspended: boolean;
+}
 
 export default function AdminDashboard() {
-  const [users, setUsers] = useState(initialUsers);
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  // Fetch users on component mount
+  useEffect(() => {
+  const token = localStorage.getItem("access_token");
+  const refreshToken = localStorage.getItem("refresh_token");
+
+  if (!token || !refreshToken) {
+    router.push("/auth/login");
+    return;
+  }
+    const loadUsers = async () => {
+      try {
+        const response = await fetchUsers();
+        
+        if (response.error) {
+          setError(response.error);
+        } else {
+          setUsers(response as User[]);
+        }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
+        if (errorMessage.includes('401')) {
+          try {
+            await refreshAccessToken();
+            // Retry fetching users
+            const retryResponse = await fetchUsers();
+            
+            if (retryResponse.error) {
+              setError(retryResponse.error);
+            } else {
+              setUsers(retryResponse as User[]);
+            }
+          } catch {
+            router.push("/auth/login");
+          }
+        } else {
+          setError(errorMessage);
+        }
+        
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadUsers();
+    const interval = setInterval(() => {
+      refreshAccessToken();
+    }, 600000); // Every 10 minutes
+
+    // Clean up interval on component unmount
+    return () => clearInterval(interval);
+  }, [router]);
 
   // Function to remove user
-  const removeUser = (id: number) => {
+  const handleRemoveUser = async (id: number) => {
     const confirmed = window.confirm("Are you sure you want to delete this user?");
     if (confirmed) {
-      setUsers(users.filter(user => user.id !== id));
+      const response = await removeUser(id);
+      
+      if (response.error) {
+        alert(response.error);
+      } else {
+        setUsers(users.filter(user => user.id !== id));
+      }
     }
   };
 
-  // Function to suspend user
-  const toggleSuspendUser = (id: number) => {
-    setUsers(users.map(user => 
-      user.id === id ? { ...user, is_suspended: !user.is_suspended } : user
-    ));
+  // Function to suspend/unsuspend user
+  const handleToggleSuspendUser = async (id: number, currentSuspendStatus: boolean) => {
+    const response = await toggleUserSuspension(id, currentSuspendStatus);
+    
+    if (response.error) {
+      alert(response.error);
+    } else {
+      setUsers(users.map(user => 
+        user.id === id ? { ...user, is_suspended: !currentSuspendStatus } : user
+      ));
+    }
   };
+
+  // Render loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-xl text-gray-600">Loading users...</div>
+      </div>
+    );
+  }
+
+  // Render error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-xl text-red-600">{error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -36,7 +127,7 @@ export default function AdminDashboard() {
         <div className="max-w-6xl mx-auto flex justify-between items-center py-4 px-6">
           <h1 className="text-xl font-semibold text-gray-800">Admin Dashboard</h1>
           <div className="space-x-6 text-gray-600">
-            <Link href="/admin/reports" className="hover:text-blue-500 transition">View Reports</Link>
+            <Link href="/admin/sales" className="hover:text-blue-500 transition">View Sales</Link>
             <Link href="/admin/logs" className="hover:text-blue-500 transition">View Logs</Link>
             <Link href="/" className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition">Home</Link>
           </div>
@@ -68,7 +159,7 @@ export default function AdminDashboard() {
                   <tr key={user.id} className="border-b border-gray-200 hover:bg-gray-100 transition">
                     <td className="py-3 px-6 flex items-center gap-2">
                       {user.name}
-                      {user.is_verified && <FiUserCheck size={18} className="text-blue-500" />} {/* Blue Tick */}
+                      {user.is_verified && <FiUserCheck size={18} className="text-blue-500" />}
                     </td>
                     <td className="py-3 px-6">{user.email}</td>
                     <td className="py-3 px-6">{user.phone}</td>
@@ -76,7 +167,7 @@ export default function AdminDashboard() {
                     <td className="py-3 px-6 text-center flex justify-center gap-4">
                       {/* Suspend Button */}
                       <button
-                        onClick={() => toggleSuspendUser(user.id)}
+                        onClick={() => handleToggleSuspendUser(user.id, user.is_suspended)}
                         className={`px-3 py-1 rounded-md flex items-center gap-2 transition ${
                           user.is_suspended ? "bg-yellow-500 text-white hover:bg-yellow-600" : "bg-gray-500 text-white hover:bg-gray-600"
                         }`}
@@ -87,7 +178,7 @@ export default function AdminDashboard() {
 
                       {/* Remove Button */}
                       <button
-                        onClick={() => removeUser(user.id)}
+                        onClick={() => handleRemoveUser(user.id)}
                         className="bg-red-500 text-white px-3 py-1 rounded-md flex items-center gap-2 hover:bg-red-600 transition"
                       >
                         <FiTrash2 size={16} />

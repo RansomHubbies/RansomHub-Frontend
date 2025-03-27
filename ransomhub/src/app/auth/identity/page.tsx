@@ -2,6 +2,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter, useSearchParams } from "next/navigation";
+import { verifyIdentity } from "../../api";
 
 export default function VerifyIdentityPage() {
   return (
@@ -36,23 +37,8 @@ function VerifyIdentityForm({ email }: { email: string | null }) {
     setErrorMessage("");
 
     try {
-      const response = await fetch("https://192.168.2.233/api/users/identityverify/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          email,
-          otp: data.otp,
-          new_password: data.password,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Invalid OTP or password reset failed.");
-      }
-
+      await verifyIdentity(email, data.otp, data.password);
+      
       alert("Password reset successful! Redirecting to login...");
       router.push("/auth/login");
     } catch (error) {
