@@ -1,4 +1,4 @@
-const API_URL = "http://127.0.0.1:8000/api/users";
+const API_URL = "http://127.0.0.1:8000/api";
 // const API_URL = "https://192.168.2.233/api/users";
 
 
@@ -16,7 +16,7 @@ export const getCSRFTokenFromCookie = () => {
 export const signup = async (name,username, email, password,phone) => {
     try {
         const csrfToken = getCSRFTokenFromCookie();
-        const response = await fetch(`${API_URL}/signup/`, {
+        const response = await fetch(`${API_URL}/users/signup/`, {
             method: "POST",
             headers: { "Content-Type": "application/json","X-CSRFToken": csrfToken, },
             credentials: "include",
@@ -39,7 +39,7 @@ export const signup = async (name,username, email, password,phone) => {
 export const verifyOtp = async (email, otp) => {
     try {
         const csrfToken = getCSRFTokenFromCookie();  
-        const response = await fetch(`${API_URL}/verifyotp/`, {
+        const response = await fetch(`${API_URL}/users/verifyotp/`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -70,7 +70,7 @@ export const verifyOtp = async (email, otp) => {
 export const resendOtp = async (email) => {
     try {
         const csrfToken = getCSRFTokenFromCookie();
-        const response = await fetch(`${API_URL}/resendotp/`, {
+        const response = await fetch(`${API_URL}/users/resendotp/`, {
             method: "POST",
             headers: { "Content-Type": "application/json","X-CSRFToken": csrfToken, },
             credentials: "include",
@@ -96,7 +96,7 @@ export const resendOtp = async (email) => {
 export const login = async (email, password) => {
     try {
         const csrfToken = getCSRFTokenFromCookie();
-        const response = await fetch(`${API_URL}/login/`, {
+        const response = await fetch(`${API_URL}/users/login/`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken, },
             credentials: "include",
@@ -122,7 +122,7 @@ export const login = async (email, password) => {
 export const logout = async () => {
     try {
         const csrfToken = getCSRFTokenFromCookie();
-        const response = await fetch(`${API_URL}/logout/`, {
+        const response = await fetch(`${API_URL}/users/logout/`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -153,7 +153,7 @@ export const refreshAccessToken = async () => {
     if (refreshToken) {
         try {
             const csrfToken = getCSRFTokenFromCookie();
-            const response = await fetch(`${API_URL}/refresh/`, {
+            const response = await fetch(`${API_URL}/users/refresh/`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -186,7 +186,7 @@ export const fetchUserProfile = async () => {
         if (!token) return { error: "No access token found" };
 
         const csrfToken = getCSRFTokenFromCookie();
-        const response = await fetch(`${API_URL}/profile`, {
+        const response = await fetch(`${API_URL}/users/profile`, {
             method: "GET",
             headers: {
                 "Authorization": `Bearer ${token}`,
@@ -215,7 +215,7 @@ export const uploadProfileImage = async (file) => {
         const formData = new FormData();
         formData.append("profile_image", file);
 
-        const response = await fetch(`${API_URL}/upload_image/`, {
+        const response = await fetch(`${API_URL}/users/upload_image/`, {
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${token}`,
@@ -242,7 +242,7 @@ export const updateUsername = async (newUsername) => {
         if (!token) return { error: "User is not authenticated." };
 
         const csrfToken = getCSRFTokenFromCookie();
-        const response = await fetch(`${API_URL}/update_username/`, {
+        const response = await fetch(`${API_URL}/users/update_username/`, {
             method: "PATCH",
             headers: {
                 "Content-Type": "application/json",
@@ -266,7 +266,7 @@ export const updateUsername = async (newUsername) => {
 export const sendResetOtp = async (email) => {
     try {
         const csrfToken = getCSRFTokenFromCookie();
-        const response = await fetch(`${API_URL}/send_reset_otp/`, {
+        const response = await fetch(`${API_URL}/users/send_reset_otp/`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
             credentials: "include",
@@ -284,29 +284,11 @@ export const sendResetOtp = async (email) => {
     }
 };
 
-export const fetchMarketplaceItems = async (searchQuery = "", page = 1) => {
-    try {
-        const response = await fetch(`${API_URL}/marketplace/?search=${searchQuery}&page=${page}&limit=100`, {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include", // If authentication is required
-        });
-
-        if (!response.ok) {
-            throw new Error("Failed to fetch marketplace items");
-        }
-
-        return await response.json(); // Backend should return { items: [], totalPages: number }
-    } catch (error) {
-        console.error("Error fetching marketplace items:", error);
-        return { items: [], totalPages: 1 }; // Return empty array if request fails
-    }
-};
 
 const getProtectedData = async () => {
     const csrfToken = getCSRFTokenFromCookie();
     const token = localStorage.getItem("access_token");
-    const response = await fetch(`${API_URL}/protected/`, {
+    const response = await fetch(`${API_URL}/users/protected/`, {
         method: "GET",
         headers: {
             "Authorization": `Bearer ${token}`,
@@ -317,3 +299,308 @@ const getProtectedData = async () => {
     const data = await response.json();
     return data;
 };
+
+export const fetchMarketplaceItems = async (
+    searchQuery = '', 
+    page = 1, 
+    category = '', 
+    minPrice = null, 
+    maxPrice = null
+  ) => {
+      try {
+          const token = localStorage.getItem("access_token");
+          const csrfToken = getCSRFTokenFromCookie();
+  
+          // Construct query parameters
+          const params = new URLSearchParams({
+              search: searchQuery,
+              page: page,
+              ...(category && { category }),
+              ...(minPrice !== null && { min_price: minPrice }),
+              ...(maxPrice !== null && { max_price: maxPrice })
+          });
+  
+          const response = await fetch(`${API_URL}/marketplace/items/?${params}`, {
+              method: "GET",
+              headers: {
+                  "Content-Type": "application/json",
+                  ...(token && { "Authorization": `Bearer ${token}` }),
+                  "X-CSRFToken": csrfToken,
+              },
+              credentials: "include"
+          });
+  
+          if (!response.ok) {
+              throw new Error("Failed to fetch marketplace items.");
+          }
+  
+          return await response.json();
+      } catch (error) {
+          return { error: error.message || "Failed to fetch marketplace items" };
+      }
+  };
+  
+  export const getMyItems = async () => {
+      try {
+          const token = localStorage.getItem("access_token");
+          const csrfToken = getCSRFTokenFromCookie();
+  
+          if (!token) return { error: "User is not authenticated." };
+  
+          const response = await fetch(`${API_URL}/marketplace/items/my_items/`, {
+              method: "GET",
+              headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${token}`,
+                  "X-CSRFToken": csrfToken,
+              },
+              credentials: "include"
+          });
+  
+          if (!response.ok) {
+              throw new Error("Failed to fetch user's items.");
+          }
+  
+          return await response.json();
+      } catch (error) {
+          return { error: error.message || "Failed to fetch user's items" };
+      }
+  };
+  
+  export const markItemAsSold = async (itemId) => {
+      try {
+          const token = localStorage.getItem("access_token");
+          const csrfToken = getCSRFTokenFromCookie();
+  
+          if (!token) return { error: "User is not authenticated." };
+  
+          const response = await fetch(`${API_URL}/marketplace/items/${itemId}/mark_as_sold/`, {
+              method: "POST",
+              headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${token}`,
+                  "X-CSRFToken": csrfToken,
+              },
+              credentials: "include"
+          });
+  
+          if (!response.ok) {
+              throw new Error("Failed to mark item as sold.");
+          }
+  
+          return await response.json();
+      } catch (error) {
+          return { error: error.message || "Failed to mark item as sold" };
+      }
+  };
+
+  export const fetchCategories = async () => {
+    try {
+      const token = localStorage.getItem("access_token");
+      const csrfToken = getCSRFTokenFromCookie();
+  
+      const response = await fetch(`${API_URL}/marketplace/categories/`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { "Authorization": `Bearer ${token}` }),
+          "X-CSRFToken": csrfToken,
+        },
+        credentials: "include"
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch categories');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      return [];
+    }
+  };
+  
+  export const createMarketplaceItem = async (itemData) => {
+    try {
+      const token = localStorage.getItem("access_token");
+      const csrfToken = getCSRFTokenFromCookie();
+  
+      const response = await fetch(`${API_URL}/marketplace/items/`, {
+        method: 'POST',
+        body: itemData,
+        headers: {
+          ...(token && { "Authorization": `Bearer ${token}` }),
+          "X-CSRFToken": csrfToken,
+        },
+        credentials: "include"
+      });
+  
+      if (!response.ok) {
+        // Try to parse error response
+        const errorResponse = await response.json().catch(() => null);
+        throw new Error(errorResponse?.detail || 'Failed to create marketplace item');
+      }
+  
+      return await response.json();
+    } catch (error) {
+      console.error('Error creating marketplace item:', error);
+      throw error;
+    }
+  };
+
+  export const fetchUsers = async () => {
+    try {
+        const token = localStorage.getItem("access_token");
+        const csrfToken = getCSRFTokenFromCookie();
+
+        if (!token) return { error: "User is not authenticated." };
+
+        const response = await fetch(`${API_URL}/admins/users/`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`,
+                "X-CSRFToken": csrfToken,
+            },
+            credentials: "include"
+        });
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch users.");
+        }
+
+        return await response.json();
+    } catch (error) {
+        return { error: error.message || "Failed to fetch users" };
+    }
+};
+
+// Remove user
+export const removeUser = async (userId) => {
+    try {
+        const token = localStorage.getItem("access_token");
+        const csrfToken = getCSRFTokenFromCookie();
+
+        if (!token) return { error: "User is not authenticated." };
+
+        const response = await fetch(`${API_URL}/admins/users/${userId}/`, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`,
+                "X-CSRFToken": csrfToken,
+            },
+            credentials: "include"
+        });
+
+        if (!response.ok) {
+            throw new Error("Failed to remove user.");
+        }
+
+        return { success: true };
+    } catch (error) {
+        return { error: error.message || "Failed to remove user" };
+    }
+};
+
+// Toggle user suspension
+export const toggleUserSuspension = async (userId, isSuspended) => {
+    try {
+        const token = localStorage.getItem("access_token");
+        const csrfToken = getCSRFTokenFromCookie();
+
+        if (!token) return { error: "User is not authenticated." };
+
+        const response = await fetch(`${API_URL}/admins/users/${userId}/toggle_suspension/`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`,
+                "X-CSRFToken": csrfToken,
+            },
+            body: JSON.stringify({ is_suspended: !isSuspended }),
+            credentials: "include"
+        });
+
+        if (!response.ok) {
+            throw new Error("Failed to toggle user suspension.");
+        }
+
+        return await response.json();
+    } catch (error) {
+        return { error: error.message || "Failed to toggle user suspension" };
+    }
+};
+
+export const fetchActivityLogs = async (filters = {}) => {
+    try {
+        const token = localStorage.getItem("access_token");
+        const csrfToken = getCSRFTokenFromCookie();
+
+        if (!token) return { error: "User is not authenticated." };
+
+        // Construct query parameters
+        const queryParams = new URLSearchParams();
+        
+        if (filters.action_type) {
+            queryParams.append('action_type', filters.action_type);
+        }
+        
+        if (filters.start_date) {
+            queryParams.append('start_date', filters.start_date);
+        }
+        
+        if (filters.end_date) {
+            queryParams.append('end_date', filters.end_date);
+        }
+
+        // Construct the full URL with query parameters
+        const url = `${API_URL}/admins/logs/?${queryParams.toString()}`;
+
+        const response = await fetch(url, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`,
+                "X-CSRFToken": csrfToken,
+            },
+            credentials: "include"
+        });
+        console.log(response)
+        if (!response.ok) {
+            throw new Error("Failed to fetch activity logs.");
+        }
+
+        return await response.json();
+    } catch (error) {
+        return { 
+            error: error.message || "Failed to fetch activity logs",
+            logs: []
+        };
+    }
+};
+export const verifyIdentity = async (email, otp, newPassword) => {
+    try {
+      const url= `${API_URL}/users/identityverify/`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          email,
+          otp,
+          new_password: newPassword,
+        }),
+      });
+  
+      const result = await response.json();
+  
+      if (!response.ok) {
+        throw new Error(result.error || "Invalid OTP or password reset failed.");
+      }
+  
+      return result;
+    } catch (error) {
+      throw error instanceof Error ? error : new Error("Something went wrong.");
+    }
+  };

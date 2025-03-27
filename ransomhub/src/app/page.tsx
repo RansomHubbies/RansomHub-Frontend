@@ -20,6 +20,8 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [editingUsername, setEditingUsername] = useState(false);
   const [newUsername, setNewUsername] = useState<string>("");
+  const [isAdmin, setIsAdmin] = useState(false);
+
   const router = useRouter();
 
   useEffect(() => {
@@ -40,6 +42,7 @@ export default function Dashboard() {
           setUsername(response.username);
           setEmail(response.email);
           setProfileImage(response.profileImage || "/default-profile.png");
+          setIsAdmin(response.is_admin);
         }
         setLoading(false);
       };
@@ -113,7 +116,9 @@ export default function Dashboard() {
           <div className="space-x-6 text-gray-600">
             <Link href="/chats" className="hover:text-blue-500 transition">Chats</Link>
             <Link href="/marketplace" className="hover:text-blue-500 transition">Marketplace</Link>
-            <Link href="/admin" className="hover:text-blue-500 transition">Admin</Link>
+            {isAdmin && ( // Minimal change: conditionally render admin link
+              <Link href="/admin" className="hover:text-blue-500 transition">Admin</Link>
+            )}
             <button 
               onClick={handleLogout} 
               className="hover:text-blue-500 transition"
