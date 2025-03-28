@@ -604,3 +604,94 @@ export const verifyIdentity = async (email, otp, newPassword) => {
       throw error instanceof Error ? error : new Error("Something went wrong.");
     }
   };
+
+  export const Identity = async (file) => {
+    try {
+        const token = localStorage.getItem("access_token");
+        const csrfToken = getCSRFTokenFromCookie();
+
+        if (!token) return { error: "User is not authenticated." };
+
+        // Create FormData to send file
+        const formData = new FormData();
+        formData.append('identity_proof', file);
+
+        const response = await fetch(`${API_URL}/users/verify_identity/`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'X-CSRFToken': csrfToken,
+            },
+            credentials: "include"
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || "Verification submission failed");
+        }
+
+        return await response.json();
+    } catch (error) {
+        return { 
+            error: error.message || "Network error. Please try again.",
+        };
+    }
+};
+
+// View user verification documents
+export const viewVerificationDocs = async (userId) => {
+    try {
+        const token = localStorage.getItem("access_token");
+        const csrfToken = getCSRFTokenFromCookie();
+
+        if (!token) return { error: "User is not authenticated." };
+
+        const response = await fetch(`${API_URL}/admins/verification_docs/${userId}/`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`,
+                "X-CSRFToken": csrfToken,
+            },
+            credentials: "include"
+        });
+
+        if (!response.ok) {
+            throw new Error("Failed to retrieve verification documents.");
+        }
+
+        return await response.json();
+    } catch (error) {
+        return { error: error.message || "Failed to view verification documents" };
+    }
+};
+
+// Disapprove user
+export const disapproveUser = async (userId) => {
+    try {
+        const token = localStorage.getItem("access_token");
+        const csrfToken = getCSRFTokenFromCookie();
+
+        if (!token) return { error: "User is not authenticated." };
+
+        const response = await fetch(`${API_URL}/admins/disapprove/${userId}/`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`,
+                "X-CSRFToken": csrfToken,
+            },
+            credentials: "include"
+        });
+
+        if (!response.ok) {
+            throw new Error("Failed to disapprove user.");
+        }
+
+        return await response.json();
+    } catch (error) {
+        return { error: error.message || "Failed to disapprove user" };
+    }
+};
+

@@ -1,26 +1,28 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { FiTrash2, FiUserCheck } from "react-icons/fi";
-import { MdBlock } from "react-icons/md";
+import { FiTrash2, FiUserCheck, FiEye } from "react-icons/fi";
+import { MdBlock, MdCancel } from "react-icons/md";
 import { useRouter } from "next/navigation";
-import { fetchUsers, removeUser, toggleUserSuspension,refreshAccessToken  } from "../api";
+import { fetchUsers, removeUser, toggleUserSuspension,refreshAccessToken, viewVerificationDocs, disapproveUser  } from "../api";
 
 // Define User interface
 interface User {
   id: number;
-  name: string;
+  first_name: string;
   email: string;
   phone: string;
   username: string;
-  is_verified: boolean;
+  is_approved: boolean;
   is_suspended: boolean;
+  verification_docs: string | File;
 }
 
 export default function AdminDashboard() {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedDocument, setSelectedDocument] = useState<string | null>(null);
   const router = useRouter();
 
   // Fetch users on component mount
@@ -101,7 +103,52 @@ export default function AdminDashboard() {
       ));
     }
   };
+  const handleViewVerificationDocs = async (userId: number) => {
+    try {
+      const response = await viewVerificationDocs(userId);
+      
+      if (response.error) {
+        alert(response.error);
+      } else {
+        // Assuming the response contains a URL or base64 string of the document
+        setSelectedDocument(response.documentUrl);
+        // console.log(response.documentUrl)
+        
+        // Open the document in a new window or modal
+        if (response.documentUrl) {
+          window.open(response.documentUrl, '_blank');
+        }
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "An error occurred while viewing documents";
+      alert(errorMessage);
+    }
+  };
 
+  // Function to disapprove user
+  const handleDisapproveUser = async (id: number, currentStatus: boolean) => {
+    const confirmed = window.confirm(currentStatus 
+      ? "Are you sure you want to disapprove this user?" 
+      : "Are you sure you want to approve this user?"
+    );
+    if (confirmed) {
+      try {
+        const response = await disapproveUser(id);
+        
+        if (response.error) {
+          alert(response.error);
+        } else {
+          
+          setUsers(users.map(user => 
+            user.id === id ? { ...user, is_approved: !currentStatus } : user
+          ));
+        }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "An error occurred while changing approval status";
+        alert(errorMessage);
+      }
+    }
+  };
   // Render loading state
   if (isLoading) {
     return (
@@ -158,13 +205,32 @@ export default function AdminDashboard() {
                 users.map(user => (
                   <tr key={user.id} className="border-b border-gray-200 hover:bg-gray-100 transition">
                     <td className="py-3 px-6 flex items-center gap-2">
-                      {user.name}
-                      {user.is_verified && <FiUserCheck size={18} className="text-blue-500" />}
+                      {user.first_name}
+                      {user.is_approved && <FiUserCheck size={18} className="text-blue-500" />}
                     </td>
                     <td className="py-3 px-6">{user.email}</td>
                     <td className="py-3 px-6">{user.phone}</td>
                     <td className="py-3 px-6">@{user.username}</td>
                     <td className="py-3 px-6 text-center flex justify-center gap-4">
+                    <button
+                        onClick={() => handleViewVerificationDocs(user.id)}
+                        className="bg-blue-500 text-white px-3 py-1 rounded-md flex items-center gap-2 hover:bg-blue-600 transition"
+                        // disabled={!user.verification_docs}
+                      >
+                        <FiEye size={16} />
+                        View
+                      </button>
+
+                      {/* Disapprove Button */}
+                      {/* {user.is_approved && ( */}
+                      {(
+                        <button
+                          onClick={() => handleDisapproveUser(user.id,user.is_approved)}
+                          className="bg-red-500 text-white px-3 py-1 rounded-md flex items-center gap-2 hover:bg-red-600 transition"
+                        >
+                          {user.is_approved ? "Disapprove":"Approve"}
+                        </button>
+                      )}
                       {/* Suspend Button */}
                       <button
                         onClick={() => handleToggleSuspendUser(user.id, user.is_suspended)}

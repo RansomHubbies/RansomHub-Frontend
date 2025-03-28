@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { FiEdit2 } from "react-icons/fi"; // Edit icon
+import { FiEdit2,FiCheckCircle,FiXCircle } from "react-icons/fi"; // Edit icon
 import { MdCloudUpload } from "react-icons/md"; // Upload icon
 import Link from "next/link";
 import { 
@@ -21,6 +21,7 @@ export default function Dashboard() {
   const [editingUsername, setEditingUsername] = useState(false);
   const [newUsername, setNewUsername] = useState<string>("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isApproved, setIsApproved] = useState(false);
 
   const router = useRouter();
 
@@ -43,6 +44,7 @@ export default function Dashboard() {
           setEmail(response.email);
           setProfileImage(response.profileImage || "/default-profile.png");
           setIsAdmin(response.is_admin);
+          setIsApproved(response.is_approved);
         }
         setLoading(false);
       };
@@ -102,7 +104,9 @@ export default function Dashboard() {
     }
     setLoading(false);
   };
-
+  const handleGetVerified = () => {
+    router.push("/verification");
+  };
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -114,10 +118,21 @@ export default function Dashboard() {
         <div className="max-w-5xl mx-auto flex justify-between py-4 px-1">
           <h1 className="text-xl font-semibold text-gray-800">Dashboard</h1>
           <div className="space-x-6 text-gray-600">
-            <Link href="/chats" className="hover:text-blue-500 transition">Chats</Link>
+            {isApproved&&(
+              <Link href="/chats" className="hover:text-blue-500 transition">Chats</Link>
+            )}
+
             <Link href="/marketplace" className="hover:text-blue-500 transition">Marketplace</Link>
             {isAdmin && ( // Minimal change: conditionally render admin link
               <Link href="/admin" className="hover:text-blue-500 transition">Admin</Link>
+            )}
+            {!isApproved && (
+              <button 
+                onClick={handleGetVerified} 
+                className="bg-yellow-500 text-white px-3 py-1 rounded-md hover:bg-yellow-600 transition text-sm"
+              >
+                Get Verified
+              </button>
             )}
             <button 
               onClick={handleLogout} 
@@ -156,7 +171,22 @@ export default function Dashboard() {
 
           {/* User Info */}
           <div className="mt-6 text-center space-y-2">
-            <h2 className="text-xl font-semibold text-gray-800">{username}</h2>
+          <div className="flex items-center justify-center gap-2">
+              <h2 className="text-xl font-semibold text-gray-800">{username}</h2>
+              {isApproved ? (
+                <FiCheckCircle 
+                  size={20} 
+                  className="text-green-500" 
+                  title="Verified Account" 
+                />
+              ) : (
+                <FiXCircle 
+                  size={20} 
+                  className="text-red-500" 
+                  title="Unverified Account" 
+                />
+              )}
+            </div>
             <p className="text-gray-500">{email}</p>
 
             {/* Username Section */}
