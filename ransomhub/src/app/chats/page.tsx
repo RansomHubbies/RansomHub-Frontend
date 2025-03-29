@@ -5,7 +5,8 @@ import ChatWindow from "@/components/chat/ChatWindow";
 import { useState } from "react";
 
 export default function ChatPage() {
-  const [selectedChat, setSelectedChat] = useState<string | null>(null);
+  const [selectedChat, setSelectedChat] = useState<{id: string, name: string} | null>(null);
+
 
   return (
     <div className="flex h-screen">
@@ -14,9 +15,9 @@ export default function ChatPage() {
       
       {/* Chat Window (Shows selected chat) */}
       <div className="flex-1 flex flex-col">
-        {selectedChat ? (
-          <ChatWindow chatId={selectedChat} />
-        ) : (
+      {selectedChat ? (
+        <ChatWindow chatId={selectedChat.id} chatName={selectedChat.name} />
+      ) : (
           <div className="flex justify-center items-center h-full text-gray-500">
             Select a chat to start messaging
           </div>
