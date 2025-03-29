@@ -1,10 +1,11 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { fetchItemDetails, refreshAccessToken } from "../../api";
 
-// TypeScript interface for an item (similar to the one in Marketplace)
+// TypeScript interface for an item
 interface Item {
   id: string;
   title: string;
@@ -23,32 +24,51 @@ interface Item {
   status?: string;
 }
 
-// API function to fetch item details (you'll need to implement this in your API file)
-const fetchItemDetails = async (id: string): Promise<Item> => {
-  const response = await fetch(`/api/marketplace/items/${id}`);
-  if (!response.ok) {
-    throw new Error('Failed to fetch item details');
-  }
-  return response.json();
-};
-
 export default function ItemDetailPage() {
   const params = useParams();
   const itemId = params.id as string;
+  const router = useRouter();
 
   const [item, setItem] = useState<Item | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    const refreshToken = localStorage.getItem("refresh_token");
+    if (!token || !refreshToken) {
+      router.push("/auth/login");
+      return;
+    }
+
     const loadItemDetails = async () => {
+      setIsLoading(true);
+      setError(null);
+      
       try {
-        setIsLoading(true);
         const itemDetails = await fetchItemDetails(itemId);
         setItem(itemDetails);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
         setError(errorMessage);
+        setItem(null);
+        
+        if (errorMessage.includes('401')) {
+          try {
+            await refreshAccessToken();
+            // Optionally, retry the fetch after refreshing token
+            try {
+              const retryDetails = await fetchItemDetails(itemId);
+              setItem(retryDetails);
+              setError(null);
+            } catch (retryErr) {
+              // If retry fails, redirect to login
+              router.push("/auth/login");
+            }
+          } catch {
+            router.push("/auth/login");
+          }
+        }
       } finally {
         setIsLoading(false);
       }
@@ -57,7 +77,14 @@ export default function ItemDetailPage() {
     if (itemId) {
       loadItemDetails();
     }
-  }, [itemId]);
+    
+    // Refresh token every 10 minutes
+    const interval = setInterval(() => {
+      refreshAccessToken();
+    }, 600000);
+    
+    return () => clearInterval(interval);
+  }, [itemId, router]);
 
   if (isLoading) {
     return (
@@ -80,82 +107,90 @@ export default function ItemDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-5xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden flex">
-        {/* Image Section */}
-        <div className="w-1/2 p-6">
-          <Image 
-            src={item.primary_image || "/default-item.png"} 
-            alt={item.title}
-            width={500}
-            height={500}
-            className="w-full h-96 object-cover rounded-lg"
-          />
-          {/* Optional: Additional image gallery can be added here */}
+    <div className="min-h-screen bg-gray-50">
+      {/* Navbar - Made consistent with Marketplace component */}
+      <nav className="bg-white w-full shadow-md">
+        <div className="max-w-5xl mx-auto flex justify-between py-4 px-1">
+          <h1 className="text-xl font-semibold text-gray-800">RansomHub</h1>
+          <div className="space-x-6 text-gray-600">
+            <Link href="/marketplace" className="hover:text-blue-600 transition">Marketplace</Link>
+            <Link href="/" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Home</Link>
+          </div>
         </div>
+      </nav>
 
-        {/* Item Details Section */}
-        <div className="w-1/2 p-6">
-          <h1 className="text-3xl font-bold text-gray-800 mb-4">{item.title}</h1>
-          
-          <div className="flex justify-between items-center mb-4">
-            <p className="text-2xl font-bold text-blue-600">${item.price}</p>
-            {item.status && (
-              <span 
-                className={`px-3 py-1 rounded text-sm ${
-                  item.status === 'sold' 
-                    ? 'bg-red-100 text-red-800' 
-                    : 'bg-green-100 text-green-800'
-                }`}
-              >
-                {item.status}
-              </span>
-            )}
+      <div className="py-12">
+        <div className="max-w-5xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden flex flex-col md:flex-row">
+          {/* Image Section */}
+          <div className="w-full md:w-1/2 p-6">
+            <Image 
+              src={item.primary_image || "/default-item.png"} 
+              alt={item.title}
+              width={500}
+              height={500}
+              className="w-full h-96 object-cover rounded-lg"
+            />
+            {/* Optional: Additional image gallery can be added here */}
           </div>
 
-          <div className="mb-4">
-            <p className="text-gray-600">Category: {item.category_name || 'Uncategorized'}</p>
-          </div>
-
-          {item.description && (
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold mb-2">Description</h2>
-              <p className="text-gray-700">{item.description}</p>
-            </div>
-          )}
-
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold mb-2">Seller Information</h2>
-            <div className="flex items-center">
-              {item.seller.profile_picture && (
-                <Image 
-                  src={item.seller.profile_picture} 
-                  alt={item.seller.username}
-                  width={50}
-                  height={50}
-                  className="rounded-full mr-4"
-                />
+          {/* Item Details Section */}
+          <div className="w-full md:w-1/2 p-6">
+            <h1 className="text-3xl font-bold text-gray-800 mb-4">{item.title}</h1>
+            
+            <div className="flex justify-between items-center mb-4">
+              <p className="text-2xl font-bold text-blue-600">${item.price}</p>
+              {item.status && (
+                <span 
+                  className={`px-3 py-1 rounded text-sm ${
+                    item.status === 'sold' 
+                      ? 'bg-red-100 text-red-800' 
+                      : 'bg-green-100 text-green-800'
+                  }`}
+                >
+                  {item.status}
+                </span>
               )}
-              <div>
-                <p className="font-medium">{item.seller.username}</p>
-                <p className="text-gray-500">{item.seller.email}</p>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-gray-600">Category: {item.category_name || 'Uncategorized'}</p>
+            </div>
+
+            {item.description && (
+              <div className="mb-6">
+                <h2 className="text-xl text-gray-500 font-semibold mb-2">Description</h2>
+                <p className="text-gray-700">{item.description}</p>
+              </div>
+            )}
+
+            <div className="mb-6">
+              <h2 className="text-xl text-gray-500 font-semibold mb-2">Seller Information</h2>
+              <div className="flex items-center">
+                {item.seller.profile_picture && (
+                  <Image 
+                    src={item.seller.profile_picture} 
+                    alt={item.seller.username}
+                    width={50}
+                    height={50}
+                    className="text-gray-500 rounded-full mr-4"
+                  />
+                )}
+                <div>
+                  <p className="text-gray-500 font-medium">{item.seller.username}</p>
+                  <p className="text-gray-500">{item.seller.email}</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex space-x-4">
-            <button 
-              className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition"
-              // Add purchase/contact logic here
+            {/* Single "Buy Now" button instead of the previous two buttons */}
+            <div>
+              <button 
+              className="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 transition font-semibold w-full"
+              onClick={() => router.push(`/item/${itemId}/payments`)}
             >
-              Contact Seller
+              Buy Now
             </button>
-            <button 
-              className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition"
-              // Add purchase/cart logic here
-            >
-              Add to Cart
-            </button>
+            </div>
           </div>
         </div>
       </div>

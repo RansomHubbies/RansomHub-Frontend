@@ -50,7 +50,6 @@ export const verifyOtp = async (email, otp) => {
         });
 
         const data = await response.json();
-        console.log("OTP Verification Response:", data);
 
         if (response.status === 201) {
             if (data.token) {
@@ -695,3 +694,121 @@ export const disapproveUser = async (userId) => {
     }
 };
 
+
+export const fetchItemDetails = async (itemId) => {
+    try {
+      const token = localStorage.getItem("access_token");
+      const csrfToken = getCSRFTokenFromCookie();
+  
+      const response = await fetch(`${API_URL}/marketplace/items/${itemId}/`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { "Authorization": `Bearer ${token}` }),
+          "X-CSRFToken": csrfToken,
+        },
+        credentials: "include"
+      });
+      
+      if (!response.ok) {
+        // Handle specific error responses
+        if (response.status === 401) {
+          throw new Error('Authentication required');
+        } else if (response.status === 404) {
+          throw new Error('Item not found');
+        }
+        throw new Error('Failed to fetch item details');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching item details:', error);
+      throw error; // Re-throw to handle in the component
+    }
+  };
+
+  export const sendPaymentOtp = async (itemId, email) => {
+    try {
+        const csrfToken = getCSRFTokenFromCookie();
+        const token = localStorage.getItem("access_token");
+        
+        const response = await fetch(`${API_URL}/payments/send-otp/`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`,
+                "X-CSRFToken": csrfToken,
+            },
+            credentials: "include",
+            body: JSON.stringify({itemId,email}),
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            return data;
+        } else {
+            throw new Error(data.error || "Failed to send payment verification OTP");
+        }
+    } catch (error) {
+        return { error: error.message || "Something went wrong sending the verification code" };
+    }
+};
+
+// Function to verify payment OTP
+export const verifyPaymentOtp = async (itemId, otp) => {
+    try {
+        const csrfToken = getCSRFTokenFromCookie();
+        const token = localStorage.getItem("access_token");
+        
+        const response = await fetch(`${API_URL}/payments/verify-otp/`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`,
+                "X-CSRFToken": csrfToken,
+            },
+            credentials: "include",
+            body: JSON.stringify({ itemId, otp }),
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            return data;
+        } else {
+            throw new Error(data.error || "Invalid verification code");
+        }
+    } catch (error) {
+        return { error: error.message || "Verification failed" };
+    }
+};
+
+// Function to resend payment OTP
+export const resendPaymentOtp = async (itemId) => {
+    try {
+        const csrfToken = getCSRFTokenFromCookie();
+        const token = localStorage.getItem("access_token");
+        
+        const response = await fetch(`${API_URL}/payments/resend-otp/`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`,
+                "X-CSRFToken": csrfToken,
+            },
+            credentials: "include",
+            body: JSON.stringify({ itemId }),
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            return data;
+        } else {
+            throw new Error(data.error || "Failed to resend verification code");
+        }
+    } catch (error) {
+        return { error: error.message || "Something went wrong resending the code" };
+    }
+};
