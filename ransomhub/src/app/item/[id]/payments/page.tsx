@@ -60,6 +60,9 @@ export default function PaymentPage() {
       try {
         const itemDetails = await fetchItemDetails(itemId);
         setItem(itemDetails);
+        if (itemDetails?.status === 'sold') {
+        router.push("/marketplace");
+        }
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
         setError(errorMessage);

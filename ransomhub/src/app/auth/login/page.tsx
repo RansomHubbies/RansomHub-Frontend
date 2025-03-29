@@ -3,42 +3,54 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
 import { useRouter } from "next/navigation"; 
-import { login } from "../../api"; 
+import { login,verifyRecaptcha } from "../../api"; 
+import ReCAPTCHA from "react-google-recaptcha";
 
 export default function LoginPage() {
   const { register, handleSubmit, formState: { errors } } = useForm();
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState(""); 
+  const [captchaValue, setCaptchaValue] = useState<string | null>(null); // State to hold captcha value
+
   const router = useRouter(); 
 
   const onSubmit = async (data: any) => {
     setLoading(true);
     setErrorMessage("");
-
+  
     try {
-        // Calling the login API with email and password
-        const result = await login(data.email, data.password); 
-        console.log("Token received:", result);
-
+      // Verify the captcha first
+      const captchaResponse = captchaValue; // Use the captcha value from state
+      const captchaVerificationResult = await verifyRecaptcha(captchaResponse);
+  
+      if (captchaVerificationResult.success) {
+        // Captcha verification successful, proceed with login
+        const loginResult = await login(data.email, data.password);
+        console.log("Token received:", loginResult);
+  
         // Check if the login was successful and the access token is received
-        if (result.access_token) {
-            // Save the access token (and optionally refresh token) in localStorage
-            localStorage.setItem("access_token", result.access_token); // Store access token
-            localStorage.setItem("refresh_token", result.refresh_token || ""); // Store refresh token (optional)
-
-            // Redirect to a protected page (home/dashboard)
-            router.push("/");  
+        if (loginResult.access_token) {
+          // Save the access token (and optionally refresh token) in localStorage
+          localStorage.setItem("access_token", loginResult.access_token); // Store access token
+          localStorage.setItem("refresh_token", loginResult.refresh_token || ""); // Store refresh token (optional)
+  
+          // Redirect to a protected page (home/dashboard)
+          router.push("/");
         } else {
-            // If the login failed, show the error message
-            setErrorMessage(result.error || "Login failed. Please try again.");
+          // If the login failed, show the error message
+          setErrorMessage(loginResult.error || "Login failed. Please try again.");
         }
+      } else {
+        // Captcha verification failed, show the error message
+        setErrorMessage(captchaVerificationResult.error || "Captcha verification failed. Please try again.");
+      }
     } catch (error) {
-        setErrorMessage("Something went wrong. Please try again.");
-        console.error("API Error:", error);
+      setErrorMessage("Something went wrong. Please try again.");
+      console.error("API Error:", error);
     }
-
+  
     setLoading(false);
-};
+  };
 
 
   return (
@@ -83,7 +95,13 @@ export default function LoginPage() {
             {errors.password && <p className="text-red-500 text-xs">{String(errors.password.message)}</p>}
 
           </label>
-
+          {/* Add the ReCAPTCHA component here */}
+          <div className="mt-4">
+            <ReCAPTCHA
+              sitekey="6LeyqwMrAAAAAA6w1vcznR_GClUqOqBSbnwKjRvh" // Replace with your reCAPTCHA site key
+              onChange={(value) => setCaptchaValue(value)} // Set the captcha value on change
+            />
+          </div>
           <button
             type="submit"
             className="mt-4 w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition duration-200"

@@ -812,3 +812,25 @@ export const resendPaymentOtp = async (itemId) => {
         return { error: error.message || "Something went wrong resending the code" };
     }
 };
+
+export const verifyRecaptcha = async (captchaResponse) => {
+    try {
+      const response = await fetch(`${API_URL}/users/verify-captcha/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ captcha: captchaResponse }),
+      });
+  
+      const data = await response.json();
+  
+      if (response.ok) {
+        return data;
+      } else {
+        throw new Error(data.error || 'Failed to verify captcha');
+      }
+    } catch (error) {
+      return { error: error.message || 'Something went wrong verifying the captcha' };
+    }
+  };

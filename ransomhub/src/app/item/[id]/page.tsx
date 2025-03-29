@@ -184,12 +184,12 @@ export default function ItemDetailPage() {
 
             {/* Single "Buy Now" button instead of the previous two buttons */}
             <div>
-              <button 
+              {item.status !== 'sold'&&<button 
               className="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 transition font-semibold w-full"
               onClick={() => router.push(`/item/${itemId}/payments`)}
             >
               Buy Now
-            </button>
+            </button>}
             </div>
           </div>
         </div>

@@ -3,32 +3,47 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
-import { signup } from "../../api";
+import { signup,verifyRecaptcha } from "../../api";
+import ReCAPTCHA from "react-google-recaptcha";
+
 
 export default function SignupPage() {
   const { register, handleSubmit, formState: { errors } } = useForm();
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [captchaValue, setCaptchaValue] = useState<string | null>(null); // State to hold captcha value
   const router = useRouter();
 
   const onSubmit = async (data: any) => {
     setLoading(true);
     setErrorMessage("");
+    
     try {
-      const result = await signup(data.name,data.username, data.email, data.password, data.phone);
-      console.log(result.token)
-      if (result.email) {
-        // localStorage.setItem("token", result.token);
-        localStorage.setItem("otpEmail", result.email);
-        router.push("/auth/otp");
-
+      // Verify the captcha first
+      const captchaResponse = captchaValue; // Use the captcha value from state
+      const captchaVerificationResult = await verifyRecaptcha(captchaResponse);
+  
+      if (captchaVerificationResult.success) {
+        // Captcha verification successful, proceed with signup
+        const result = await signup(data.name, data.username, data.email, data.password, data.phone);
+        console.log(result.token);
+        
+        if (result.email) {
+          // localStorage.setItem("token", result.token);
+          localStorage.setItem("otpEmail", result.email);
+          router.push("/auth/otp");
+        } else {
+          setErrorMessage(result.error || "Signup failed. Please try again.");
+        }
       } else {
-        setErrorMessage(result.error || "Signup failed. Please try again.");
+        // Captcha verification failed, show the error message
+        setErrorMessage(captchaVerificationResult.error || "Captcha verification failed. Please try again.");
       }
     } catch (error) {
       setErrorMessage("Something went wrong. Please try again.");
       console.error("API Error:", error);
     }
+    
     setLoading(false);
   };
 
@@ -115,7 +130,13 @@ export default function SignupPage() {
             />
             {errors.password && <p className="text-red-500 text-xs">{String(errors.password.message)}</p>}
           </label>
-
+              {/* Add the ReCAPTCHA component here */}
+          <div className="mt-4">
+            <ReCAPTCHA
+              sitekey="6LeyqwMrAAAAAA6w1vcznR_GClUqOqBSbnwKjRvh" // Replace with your reCAPTCHA site key
+              onChange={(value) => setCaptchaValue(value)} // Set the captcha value on change
+            />
+          </div>
           <button
             type="submit"
             className="mt-4 w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 transition duration-200"

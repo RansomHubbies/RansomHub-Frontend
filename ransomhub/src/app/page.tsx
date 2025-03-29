@@ -28,14 +28,14 @@ export default function Dashboard() {
   useEffect(() => {
     const token = localStorage.getItem("access_token");
     const refreshToken = localStorage.getItem("refresh_token");
-
+    
     if (!token || !refreshToken) {
       router.push("/auth/login");
     } else {
       const fetchData = async () => {
         setLoading(true);
         const response = await fetchUserProfile();
-
+        
         if (response.error) {
           setError(response.error);
           router.push("/auth/login");
@@ -45,6 +45,7 @@ export default function Dashboard() {
           setProfileImage(response.profileImage || "/default-profile.png");
           setIsAdmin(response.is_admin);
           setIsApproved(response.is_approved);
+          localStorage.setItem("otpEmail",response.email)
         }
         setLoading(false);
       };
