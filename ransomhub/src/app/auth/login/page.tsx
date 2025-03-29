@@ -25,7 +25,7 @@ export default function LoginPage() {
             // Save the access token (and optionally refresh token) in localStorage
             localStorage.setItem("access_token", result.access_token); // Store access token
             localStorage.setItem("refresh_token", result.refresh_token || ""); // Store refresh token (optional)
-
+            localStorage.setItem("username", result.username);
             // Redirect to a protected page (home/dashboard)
             router.push("/");  
         } else {

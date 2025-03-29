@@ -20,6 +20,9 @@ export default function SignupPage() {
       if (result.email) {
         // localStorage.setItem("token", result.token);
         localStorage.setItem("otpEmail", result.email);
+        localStorage.setItem("username", data.username);
+        // console.log("Email:", result.email);
+        console.log("Username in signup:", data.username);
         router.push("/auth/otp");
 
       } else {
