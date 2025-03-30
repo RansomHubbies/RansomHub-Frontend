@@ -45,22 +45,50 @@ export const fetchGroups = async () => {
     return [];
   }
 };
-export async function sendMessage(sender: string, recipient: string, message: string) {
-  const response = await fetch("http://127.0.0.1:8000/api/chat/send_message", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      sender: sender,
-      recipient: recipient,
-      message: message,
-    }),
-  });
+// export async function sendMessage(sender: string, recipient: string, message: string) {
+//   const response = await fetch("http://127.0.0.1:8000/api/chat/send_message", {
+//     method: "POST",
+//     headers: {
+//       "Content-Type": "application/json",
+//     },
+//     body: JSON.stringify({
+//       sender: sender,
+//       recipient: recipient,
+//       message: message,
+//     }),
+//   });
 
-  if (!response.ok) {
-    throw new Error("Failed to send message");
+//   if (!response.ok) {
+//     throw new Error("Failed to send message");
+//   }
+
+//   return await response.json();
+// }
+export const sendMessage = async (sender: string, recipient: string, message: string) => {
+  try {
+    console.log("Sender in api:", sender);
+    console.log("Recipient:", recipient);
+    console.log("Message:", message);
+    const response = await fetch("http://127.0.0.1:8000/api/chat/send_message", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        sender: sender,
+        recipient: recipient,
+        message: message,
+      }),
+    });
+    console.log("Response status:", response);
+    if (!response.ok) {
+      const errorDetails = await response.json();
+      console.error("API error:", errorDetails);
+      throw new Error("Failed to send message");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Error sending message:", error);
+    throw error;
   }
-
-  return await response.json();
-}
+};

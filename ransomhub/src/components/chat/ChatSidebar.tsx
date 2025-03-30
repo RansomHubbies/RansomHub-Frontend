@@ -40,6 +40,14 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
   const [showGroupInfoModal, setShowGroupInfoModal] = useState(false);
   const [selectedGroupInfo, setSelectedGroupInfo] = useState<Chat | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loggedInUserName, setLoggedInUserName] = useState<string | null>(null);
+  useEffect(() => {
+    // Fetch logged-in username from localStorage
+    const loggedInUser = localStorage.getItem("username");
+    if (loggedInUser) {
+      setLoggedInUserName(loggedInUser);
+    }
+  }, []);
 
   useEffect(() => {
     const loadData = async () => {
@@ -152,7 +160,13 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
       <div className="p-4 border-b bg-white">
         <h1 className="text-xl font-semibold text-gray-900">Chats</h1>
       </div>
-
+      {/* Display logged-in username at the top */}
+      {loggedInUserName && (
+        <div className="p-4 bg-white border-b">
+          <h2 className="font-semibold text-gray-700">Logged in as:</h2>
+          <p className="text-gray-800">{loggedInUserName}</p>
+        </div>
+      )}
       <div className="p-2 border-b bg-white">
         <button
           className="w-full bg-green-500 text-white py-2 rounded-md font-medium"
