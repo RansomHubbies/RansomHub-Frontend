@@ -1,3 +1,5 @@
+import { group } from "console";
+
 export const fetchUsers = async () => {
   try {
     const response = await fetch('http://127.0.0.1:8000/api/users/get_users');
@@ -77,6 +79,35 @@ export const sendMessage = async (sender: string, recipient: string, message: st
       body: JSON.stringify({
         sender: sender,
         recipient: recipient,
+        message: message,
+      }),
+    });
+    console.log("Response status:", response);
+    if (!response.ok) {
+      const errorDetails = await response.json();
+      console.error("API error:", errorDetails);
+      throw new Error("Failed to send message");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Error sending message:", error);
+    throw error;
+  }
+};
+
+export const sendGroupMessage = async (sender: string, group: string, message: string) => {
+  try {
+    console.log("Sender in api:", sender);
+    console.log("group:", group);
+    console.log("Message:", message);
+    const response = await fetch("http://127.0.0.1:8000/api/chat/send_group_message", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        sender: sender,
+        group: group,
         message: message,
       }),
     });

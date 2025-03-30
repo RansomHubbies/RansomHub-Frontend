@@ -258,7 +258,7 @@ interface Chat {
 }
 
 interface ChatSidebarProps {
-  onSelectChat: (chatId: string, chatName: string) => void;
+  onSelectChat: (chatId: string, chatName: string, isGroup: boolean) => void;
 }
 
 export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
@@ -362,9 +362,9 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
     setShowNewGroupModal(false);
   };
 
-  const handleSelect = (chatId: string, chatName: string) => {
+  const handleSelect = (chatId: string, chatName: string, isGroup: boolean) => {
     setSelectedChat(chatId);
-    onSelectChat(chatId, chatName);  // Pass as two separate arguments
+    onSelectChat(chatId, chatName, isGroup);  // Pass as two separate arguments
   };
 
   const handleViewGroupInfo = (chat: Chat) => {
@@ -432,7 +432,7 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
           >
             <div
               className="flex-1"
-              onClick={() => handleSelect(chat.id, chat.name)}  // Updated to handle select properly
+              onClick={() => handleSelect(chat.id, chat.name, chat.isGroup)}  // Updated to handle select properly
             >
               <h2 className="font-semibold text-gray-900">{chat.name}</h2>
               <p className="text-sm text-gray-700">{chat.lastMessage}</p>
