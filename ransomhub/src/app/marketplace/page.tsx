@@ -6,6 +6,12 @@ import { useRouter } from "next/navigation";
 
 
 // TypeScript interface for an item
+interface ItemImage {
+  id: number;
+  image: string;
+  is_primary: boolean;
+}
+
 interface Item {
   id: string;
   title: string;
@@ -18,7 +24,7 @@ interface Item {
     email: string;
     profile_picture?: string;
   };
-  primary_image?: string | null;
+  primary_image?: ItemImage | null;
   status?: string;
   slug?: string;
 }
@@ -147,7 +153,7 @@ export default function Marketplace() {
               >
                 <div className="bg-white shadow-lg p-4 rounded-lg hover:shadow-xl transition cursor-pointer">
                   <img 
-                    src={item.primary_image || "/default-item.png"} 
+                    src={item.primary_image?.image || "/default-item.png"} 
                     alt={item.title} 
                     className="w-full h-40 object-cover rounded" 
                   />

@@ -90,12 +90,17 @@ export default function SellItem() {
     try {
       // Create FormData to match backend expectations
       const formData = new FormData();
-      Object.keys(form).forEach(key => {
-        const value = form[key as keyof typeof form];
-        if (value !== null) {
-          formData.append(key, value as string | Blob);
-        }
-      });
+      formData.append('title', form.title);
+      formData.append('description', form.description);
+      formData.append('price', form.price);
+      formData.append('category', form.category);
+      formData.append('status', form.status);
+      
+      // Add image - IMPORTANT: use 'images' as the key to match backend
+      if (form.primary_image) {
+        formData.append('images', form.primary_image);
+        formData.append('primary_image_index', '0'); // Set this image as primary
+      }
 
       // Call API to create item
       await createMarketplaceItem(formData);
