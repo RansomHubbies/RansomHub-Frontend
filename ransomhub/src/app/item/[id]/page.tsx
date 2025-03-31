@@ -25,7 +25,7 @@ interface Item {
     profile_picture?: string;
   };
   primary_image?: ItemImage | null;
-  images?: string[];
+  images?: ItemImage[];
   status?: string;
 }
 
@@ -52,6 +52,7 @@ export default function ItemDetailPage() {
       
       try {
         const itemDetails = await fetchItemDetails(itemId);
+        console.log(itemDetails)
         setItem(itemDetails);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
@@ -129,7 +130,9 @@ export default function ItemDetailPage() {
           {/* Image Section */}
           <div className="w-full md:w-1/2 p-6">
             <img
-              src={item.primary_image?.image || "/default-item.png"} 
+              src={(item.images && item.images.length > 0) ? 
+                item.images.find(img => img.is_primary)?.image || item.images[0].image : 
+                "/default-item.png"} 
               alt={item.title}
               width={500}
               height={500}
