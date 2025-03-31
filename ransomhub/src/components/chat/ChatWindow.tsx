@@ -1,8 +1,7 @@
-
 "use client";
 import { useState, useEffect } from "react";
 import MessageInput from "./MessageInput";
-import { sendMessage, sendGroupMessage } from "../../lib/api";  // Import the sendMessage API
+import { sendMessage, sendGroupMessage } from "../../lib/api";
 import Pusher from "pusher-js";
 
 interface Message {
@@ -30,7 +29,7 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
   console.log("Chat ID:", chatId);
   console.log("Chat Name:", chatName);
   console.log("Is Group:", isGroup);
-  const initialUser = localStorage.getItem("username") || null;  // Fetch logged-in username from localStorage
+  const initialUser = localStorage.getItem("username") || null;
   const [loggedInUser, setLoggedInUser] = useState(initialUser);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -46,55 +45,56 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
       setLoading(true);
       try {
         if (!isGroup){
-        const response = await fetch(`http://127.0.0.1:8000/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`);
-        
-        if (!response.ok) {
-          throw new Error(`Error fetching messages: ${response.status}`);
+          const response = await fetch(`http://127.0.0.1:8000/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`);
+          
+          if (!response.ok) {
+            throw new Error(`Error fetching messages: ${response.status}`);
+          }
+          
+          const data: Message[] = await response.json();
+          
+          // Sort messages by timestamp (oldest first)
+          const sortedMessages = data.sort((a, b) => 
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          );
+          
+          // Convert to display format and determine if message is from logged-in user
+          const formattedMessages: DisplayMessage[] = sortedMessages.map(msg => ({
+            sender: msg.sender,
+            text: msg.message,
+            isMe: msg.sender === loggedInUser,
+            timestamp: msg.timestamp
+          }));
+          
+          setMessages(formattedMessages);
+          console.log("Fetched and loaded", formattedMessages.length, "messages");
         }
-        
-        const data: Message[] = await response.json();
-        
-        // Sort messages by timestamp (oldest first)
-        const sortedMessages = data.sort((a, b) => 
-          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-        );
-        
-        // Convert to display format and determine if message is from logged-in user
-        const formattedMessages: DisplayMessage[] = sortedMessages.map(msg => ({
-          sender: msg.sender,
-          text: msg.message,
-          isMe: msg.sender === loggedInUser,
-          timestamp: msg.timestamp
-        }));
-        
-        setMessages(formattedMessages);
-        console.log("Fetched and loaded", formattedMessages.length, "messages");
+        else {
+          const response = await fetch(`http://127.0.0.1:8000/api/chat/get_group_messages?group=${chatId}`);
+          
+          if (!response.ok) {
+            throw new Error(`Error fetching messages: ${response.status}`);
+          }
+          
+          const data: Message[] = await response.json();
+          
+          // Sort messages by timestamp (oldest first)
+          const sortedMessages = data.sort((a, b) => 
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          );
+          
+          // Convert to display format and determine if message is from logged-in user
+          const formattedMessages: DisplayMessage[] = sortedMessages.map(msg => ({
+            sender: msg.sender,
+            text: msg.message,
+            isMe: msg.sender === loggedInUser,
+            timestamp: msg.timestamp
+          }));
+          
+          setMessages(formattedMessages);
+          console.log("Fetched and loaded", formattedMessages.length, "messages");
+        }
       }
-      else {
-        const response = await fetch(`http://127.0.0.1:8000/api/chat/get_group_messages?group=${chatId}`);
-        
-        if (!response.ok) {
-          throw new Error(`Error fetching messages: ${response.status}`);
-        }
-        
-        const data: Message[] = await response.json();
-        
-        // Sort messages by timestamp (oldest first)
-        const sortedMessages = data.sort((a, b) => 
-          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-        );
-        
-        // Convert to display format and determine if message is from logged-in user
-        const formattedMessages: DisplayMessage[] = sortedMessages.map(msg => ({
-          sender: msg.sender,
-          text: msg.message,
-          isMe: msg.sender === loggedInUser,
-          timestamp: msg.timestamp
-        }));
-        
-        setMessages(formattedMessages);
-        console.log("Fetched and loaded", formattedMessages.length, "messages");
-      }}
       catch (error) {
         console.error("Failed to fetch messages:", error);
       } finally {
@@ -118,11 +118,15 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
 
     const channel = pusher.subscribe(loggedInUser);
 
-    channel.bind(chatId, (data: { message: string }) => {
+    channel.bind(chatId, (data: { message: string, sender: string }) => {
       // Update the chat in real-time with new messages
       setMessages(prevMessages => [
         ...prevMessages,
-        { sender: chatId, text: data.message, isMe: false },
+        { 
+          sender: data.sender || chatId, // Use the sender from data if available
+          text: data.message, 
+          isMe: false 
+        },
       ]);
     });
     
@@ -153,7 +157,6 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
       else{
         await sendMessage(loggedInUser, chatId, message);
       }
-        // Send message with logged-in user as sender
     } catch (error) {
       console.error("Error sending message:", error);
       // Optionally handle the error in UI
@@ -176,12 +179,34 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
           </div>
         ) : (
           messages.map((msg, index) => (
-            <div key={index} className={`mb-2 ${msg.isMe ? "text-right" : "text-left"}`}>
-              <p className={`inline-block p-2 rounded ${msg.isMe ? "bg-blue-500 text-white" : "bg-gray-300"}`}>
-                {msg.text}
-              </p>
+            <div key={index} className={`mb-4 ${msg.isMe ? "text-right" : "text-left"}`}>
+              <div className={`inline-block rounded-lg overflow-hidden max-w-md ${msg.isMe ? "bg-blue-800" : "bg-gray-600"}`}>
+                {/* Show sender name for group chats when it's not the current user */}
+                {isGroup && !msg.isMe && (
+                  <div className="px-3 py-1 text-xs font-medium text-blue bg-opacity-100 border-b" 
+                       style={{ 
+                         backgroundColor: msg.isMe ? "rgba(37, 99, 235, 0.9)" : "rgba(75, 85, 99, 0.9)",
+                         borderBottomColor: msg.isMe ? "#1d4ed8" : "#4b5563"
+                       }}>
+                    {msg.sender}
+                  </div>
+                )}
+                {/* Show sender name for group chats when it is the current user (optional but more consistent) */}
+                {isGroup && msg.isMe && (
+                  <div className="px-3 py-1 text-xs font-medium text-blue bg-opacity-100 border-b" 
+                       style={{ 
+                         backgroundColor: "rgba(37, 99, 235, 0.9)",
+                         borderBottomColor: "#1d4ed8"
+                       }}>
+                    You
+                  </div>
+                )}
+                <p className={`p-3 ${msg.isMe ? "text-white" : ""}`}>
+                  {msg.text}
+                </p>
+              </div>
               {msg.timestamp && (
-                <span className="text-xs text-gray-500 block">
+                <span className="text-xs text-gray-500 block mt-1">
                   {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               )}
@@ -193,3 +218,5 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
     </div>
   );
 }
+
+
