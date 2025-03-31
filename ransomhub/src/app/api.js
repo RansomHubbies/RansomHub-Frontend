@@ -24,7 +24,6 @@ export const signup = async (name,username, email, password,phone) => {
         });
         
         const data = await response.json();
-        console.log("Signup API Response:", data);
 
         if (response.status === 201) {
             return data;  // 
@@ -77,7 +76,6 @@ export const resendOtp = async (email) => {
         });
 
         const data = await response.json();
-        console.log("Resend OTP Response:", data);
 
         if (response.status === 200) {
             return data;  
@@ -103,7 +101,6 @@ export const login = async (email, password) => {
         });
 
         const data = await response.json();
-        console.log("Login API Response:", data);
 
         if (response.status === 200) {
             localStorage.setItem("access_token", data.access_token);
@@ -135,7 +132,6 @@ export const logout = async () => {
         if (response.status === 200) {
             localStorage.removeItem("access_token"); 
             localStorage.removeItem("refresh_token");
-            console.log("Logged out successfully");
             return data;
         } else {
             throw new Error(data.error || "Logout failed");
@@ -565,7 +561,6 @@ export const fetchActivityLogs = async (filters = {}) => {
             },
             credentials: "include"
         });
-        console.log(response)
         if (!response.ok) {
             throw new Error("Failed to fetch activity logs.");
         }
@@ -838,7 +833,6 @@ export const verifyRecaptcha = async (captchaResponse) => {
   };
   
   export const normalizeImageUrl = (url) => {
-    console.log("Original URL:", url);
     
     if (!url) return "/default-item.png";
     
@@ -846,6 +840,5 @@ export const verifyRecaptcha = async (captchaResponse) => {
         ? url.replace(/^http:\/\//i, 'https://') 
         : url;
         
-    console.log("Normalized URL:", normalized);
     return normalized;
 };

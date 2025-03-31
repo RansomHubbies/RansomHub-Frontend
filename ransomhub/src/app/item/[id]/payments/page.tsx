@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { fetchItemDetails, refreshAccessToken, sendPaymentOtp } from "../../../api";
+import { fetchItemDetails, refreshAccessToken, sendPaymentOtp,normalizeImageUrl } from "../../../api";
 
 // TypeScript interface for an item
 interface ItemImage {
@@ -25,7 +25,7 @@ interface Item {
     profile_picture?: string;
   };
   primary_image?: ItemImage | null;
-  images?: string[];
+  images?: ItemImage[];
   status?: string;
 }
 
@@ -190,7 +190,9 @@ export default function PaymentPage() {
               <div className="flex mb-4">
                 <div className="w-24 h-24 relative overflow-hidden rounded-md mr-4">
                   <img
-                    src={item.primary_image?.image || "/default-item.png"} 
+                    src={normalizeImageUrl((item.images && item.images.length > 0) ? 
+                                    item.images.find(img => img.is_primary)?.image || item.images[0].image :
+                                    "/default-item.png")}
                     alt={item.title}
                     className="object-cover"
                   />
