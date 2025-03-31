@@ -836,3 +836,16 @@ export const verifyRecaptcha = async (captchaResponse) => {
       return { error: error.message || 'Something went wrong verifying the captcha' };
     }
   };
+  
+  export const normalizeImageUrl = (url) => {
+    console.log("Original URL:", url);
+    
+    if (!url) return "/default-item.png";
+    
+    const normalized = typeof url === 'string' && url.toLowerCase().startsWith('http://') 
+        ? url.replace(/^http:\/\//i, 'https://') 
+        : url;
+        
+    console.log("Normalized URL:", normalized);
+    return normalized;
+};

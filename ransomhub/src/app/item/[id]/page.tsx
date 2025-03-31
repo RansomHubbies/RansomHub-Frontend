@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { fetchItemDetails, refreshAccessToken } from "../../api";
+import { fetchItemDetails, refreshAccessToken,normalizeImageUrl } from "../../api";
 
 // TypeScript interface for an item
 interface ItemImage {
@@ -37,7 +37,6 @@ export default function ItemDetailPage() {
   const [item, setItem] = useState<Item | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-
   useEffect(() => {
     const token = localStorage.getItem("access_token");
     const refreshToken = localStorage.getItem("refresh_token");
@@ -130,9 +129,9 @@ export default function ItemDetailPage() {
           {/* Image Section */}
           <div className="w-full md:w-1/2 p-6">
             <img
-              src={(item.images && item.images.length > 0) ? 
-                item.images.find(img => img.is_primary)?.image || item.images[0].image : 
-                "/default-item.png"} 
+              src={normalizeImageUrl((item.images && item.images.length > 0) ? 
+                item.images.find(img => img.is_primary)?.image || item.images[0].image :
+                "/default-item.png")} 
               alt={item.title}
               width={500}
               height={500}
