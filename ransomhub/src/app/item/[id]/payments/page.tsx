@@ -189,10 +189,9 @@ export default function PaymentPage() {
               <h2 className="text-xl font-semibold text-gray-700 mb-4">Order Summary</h2>
               <div className="flex mb-4">
                 <div className="w-24 h-24 relative overflow-hidden rounded-md mr-4">
-                  <Image 
+                  <img
                     src={item.primary_image?.image || "/default-item.png"} 
                     alt={item.title}
-                    fill
                     className="object-cover"
                   />
                 </div>

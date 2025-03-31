@@ -128,7 +128,7 @@ export default function ItemDetailPage() {
         <div className="max-w-5xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden flex flex-col md:flex-row">
           {/* Image Section */}
           <div className="w-full md:w-1/2 p-6">
-            <Image 
+            <img
               src={item.primary_image?.image || "/default-item.png"} 
               alt={item.title}
               width={500}
