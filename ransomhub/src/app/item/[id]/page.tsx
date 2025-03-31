@@ -6,6 +6,11 @@ import Image from "next/image";
 import { fetchItemDetails, refreshAccessToken } from "../../api";
 
 // TypeScript interface for an item
+interface ItemImage {
+  id: number;
+  image: string;
+  is_primary: boolean;
+}
 interface Item {
   id: string;
   title: string;
@@ -19,7 +24,7 @@ interface Item {
     email: string;
     profile_picture?: string;
   };
-  primary_image?: string | null;
+  primary_image?: ItemImage | null;
   images?: string[];
   status?: string;
 }
@@ -124,7 +129,7 @@ export default function ItemDetailPage() {
           {/* Image Section */}
           <div className="w-full md:w-1/2 p-6">
             <Image 
-              src={item.primary_image || "/default-item.png"} 
+              src={item.primary_image?.image || "/default-item.png"} 
               alt={item.title}
               width={500}
               height={500}
