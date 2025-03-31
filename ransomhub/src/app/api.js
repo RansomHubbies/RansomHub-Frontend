@@ -1,17 +1,43 @@
 const API_URL = "http://127.0.0.1:8000/api";
 // const API_URL = "https://192.168.2.233/api";
+import Cookies from 'js-cookie'
 
+export const getCsrfToken = async () => {
+    try {
+        const response = await fetch(`${API_URL}/users/csrf_cookie/`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json',
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to get CSRF token');
+        }
+        
+        const data = await response.json();
+        // Store the token for later use
+        const csrfToken = response.headers.get('X-CSRFToken') || Cookies.get('csrftoken');
+        
+        if (!csrfToken) {
+            console.warn('CSRF token not found in response or cookies');
+        }
+        
+        return { data, csrfToken };
+    } catch (error) {
+        console.error('Error fetching CSRF token:', error);
+        return { error: 'Failed to get CSRF token' };
+    }
+};
 
 export const getCSRFTokenFromCookie = () => {
-    const cookie = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("csrftoken="));
-
-    if (cookie) {
-        return cookie.split("=")[1];
-    }
+    const csrftoken = Cookies.get('csrftoken');
+    
+    if (csrftoken) return csrftoken;
+    
     console.error("CSRF token not found in cookies.");
-    return ""; 
+    return "";
 };
 export const signup = async (name,username, email, password,phone) => {
     try {

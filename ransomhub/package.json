@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@types/pusher-js": "^5.1.0",
+    "js-cookie": "^3.0.5",
     "next": "15.1.6",
     "pm2": "^5.4.3",
     "pusher-js": "^8.4.0",

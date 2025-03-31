@@ -1,15 +1,33 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
 import { useRouter } from "next/navigation"; 
-import { login } from "../../api"; 
+import { login ,getCsrfToken} from "../../api"; 
 
 export default function LoginPage() {
   const { register, handleSubmit, formState: { errors } } = useForm();
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState(""); 
   const router = useRouter(); 
+
+  useEffect(() => {
+    const fetchCsrfToken = async () => {
+      // Check if token already exists
+      const hasCsrfToken = document.cookie.includes('csrf'); // Adjust name as needed
+      
+      if (!hasCsrfToken) {
+        try {
+          await getCsrfToken();
+          console.log("CSRF token cookie set");
+        } catch (error) {
+          console.error("Error setting CSRF token:", error);
+        }
+      }
+    };
+    
+    fetchCsrfToken();
+  }, []);
 
   const onSubmit = async (data: any) => {
     setLoading(true);
