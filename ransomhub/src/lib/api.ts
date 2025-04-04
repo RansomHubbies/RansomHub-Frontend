@@ -1,5 +1,5 @@
 import { group } from "console";
-import {getCSRFTokenFromCookie} from "../app/api"
+import {getCSRFTokenFromCookie, openKeyDatabase} from "../app/api"
 
 const API_URL = 'http://127.0.0.1:8000/api/'
 export const fetchUsers = async () => {
@@ -84,11 +84,121 @@ export const fetchGroups = async (username: string | null) => {
   }
 };
 
+const get_peer_public_key = async(peer_username: string) => {
+  try {
+    const token = localStorage.getItem("access_token");
+    const csrfToken = getCSRFTokenFromCookie();
+    const response = await fetch(`${API_URL}chat/get_user_public_key?username=${peer_username}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+        "X-CSRFToken": csrfToken,
+      },
+      credentials: "include",
+    });
+    console.log("Response status:", response);
+    if (!response.ok) {
+      const errorDetails = await response.json();
+      console.error("API error:", errorDetails);
+      throw new Error(`Failed to fetch public key: ${errorDetails}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Error sending message:", error);
+    throw error;
+  }
+};
+
+const retrievePrivateKey = async(username:string) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const db = await openKeyDatabase();
+            const transaction = db.transaction(["keys"], "readonly");
+            const store = transaction.objectStore("keys");
+
+            const request = store.get(username);
+
+            request.onsuccess = async () => {
+                if (!request.result) {
+                    reject("No private key found for this user.");
+                    return;
+                }
+
+                const privateKeyRaw = request.result.key;
+
+                // Import the private key
+                const privateKey = await crypto.subtle.importKey(
+                    "pkcs8",
+                    privateKeyRaw,
+                    {
+                        name: "ECDH",
+                        namedCurve: "P-256",
+                    },
+                    false, // Not extractable for security
+                    ["deriveBits"]
+                );
+
+                resolve(privateKey);
+            };
+
+            request.onerror = () => reject(request.error);
+        } catch (error) {
+            reject(error);
+        }
+    });
+}
+
+const ecdhKeyExchange = async (username: string, publicKeyBase64: string) => {
+    try {
+        // Retrieve the stored private key
+        const privateKey = await retrievePrivateKey(username);
+
+        // Decode the base64-encoded public key
+        const publicKeyBinaryString = atob(publicKeyBase64);
+        const publicKeyBuffer = new Uint8Array(publicKeyBinaryString.length);
+        for (let i=0; i<publicKeyBinaryString.length; i++) {
+          publicKeyBuffer[i] = publicKeyBinaryString.charCodeAt(i);
+        }
+
+        // Import the public key
+        const publicKey = await crypto.subtle.importKey(
+            "spki",
+            publicKeyBuffer.buffer,
+            {
+                name: "ECDH",
+                namedCurve: "P-256",
+            },
+            true, 
+            []
+        );
+
+        // Perform ECDH key exchange
+        const sharedSecret = await crypto.subtle.deriveBits(
+            {
+                name: "ECDH",
+                public: publicKey
+            },
+            privateKey,
+            256
+        );
+
+        console.log("Derived Shared Secret:", btoa(String.fromCharCode(...new Uint8Array(sharedSecret))));
+        return sharedSecret;
+    } catch (error) {
+        console.error("Error during ECDH key exchange:", error);
+    }
+};
+
+
 export const sendMessage = async (sender: string, recipient: string, message: string) => {
   try {
-    // console.log("Sender in api:", sender);
-    // console.log("Recipient:", recipient);
-    // console.log("Message:", message);
+    
+    const peer_public_key = await get_peer_public_key(recipient);
+    console.log("Recipient Pub Key: ", peer_public_key.public_key);
+
+    const sharedSecret = await ecdhKeyExchange(sender, peer_public_key.public_key);
+
     const token = localStorage.getItem("access_token");
     const csrfToken = getCSRFTokenFromCookie();
     const response = await fetch(`${API_URL}chat/send_message`, {

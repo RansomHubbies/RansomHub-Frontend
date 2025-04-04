@@ -64,7 +64,7 @@ const generateECDHKeyPair = async () => {
     }
 };
 
-const openKeyDatabase = () => {
+export const openKeyDatabase = () => {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open("RansomHubSecureKeys", 1);
       
