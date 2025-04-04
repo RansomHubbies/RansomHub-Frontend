@@ -17,7 +17,6 @@ export const getCsrfToken = async () => {
         }
         
         const data = await response.json();
-        // Store the token for later use
         const csrfToken = response.headers.get('X-CSRFToken') || Cookies.get('csrftoken');
         
         if (!csrfToken) {
@@ -39,20 +38,100 @@ export const getCSRFTokenFromCookie = () => {
     console.error("CSRF token not found in cookies.");
     return "";
 };
+
+
+const generateECDHKeyPair = async () => {
+    try {
+        const keyPair = await window.crypto.subtle.generateKey(
+            {
+                name: "ECDH",
+                namedCurve: "P-256",
+            },
+            true,
+            ["deriveKey", "deriveBits"]
+        );
+
+        const publicKeyRaw = await window.crypto.subtle.exportKey("spki", keyPair.publicKey);
+        const publicKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(publicKeyRaw)));
+
+        return {
+            keyPair,
+            publicKeyBase64
+        };
+    } catch (error) {
+        console.error("Error generating ECDH key pair:", error);
+        throw error;
+    }
+};
+
+const openKeyDatabase = () => {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open("RansomHubSecureKeys", 1);
+      
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains("keys")) {
+          db.createObjectStore("keys", { keyPath: "username" });
+        }
+      };
+      
+      request.onsuccess = (event) => resolve(event.target.result);
+      request.onerror = (event) => reject("IndexedDB error: " + event.target.errorCode);
+    });
+  };
+
+  const storePrivateKey = async (username, privateKey) => {
+    try {
+      const db = await openKeyDatabase();
+      const privateKeyRaw = await window.crypto.subtle.exportKey("pkcs8", privateKey);
+
+      return new Promise((resolve, reject) => {
+          const transaction = db.transaction(["keys"], "readwrite");
+          const store = transaction.objectStore("keys");
+
+          const request = store.put({
+            username: username,
+            key: privateKeyRaw,
+            createdAt: new Date().toISOString()
+          });
+
+          request.onsuccess = () => {
+            console.log("Key inserted");
+          };
+
+          request.onerror = (event) => {
+            console.error("Key insert error:", event.target.error);
+            reject(event.target.error);
+          };
+  
+          transaction.oncomplete = () => resolve(true);
+          transaction.onerror = (event) => reject(event.target.error);
+      });
+    } catch (error) {
+      console.error("Error storing private key:", error);
+      throw error;
+    }
+  };
+
+
 export const signup = async (name,username, email, password,phone) => {
     try {
+
+        const { keyPair, publicKeyBase64 } = await generateECDHKeyPair();
+
         const csrfToken = getCSRFTokenFromCookie();
         const response = await fetch(`${API_URL}/users/signup/`, {
             method: "POST",
             headers: { "Content-Type": "application/json","X-CSRFToken": csrfToken, },
             credentials: "include",
-            body: JSON.stringify({ name,username, email, password, phone }),
+            body: JSON.stringify({ name,username, email, password, phone, public_key: publicKeyBase64 }),
         });
         
         const data = await response.json();
         console.log("Signup API Response:", data);
 
         if (response.status === 201) {
+            await storePrivateKey(username, keyPair.privateKey)
             return data;  // 
         } else {
             throw new Error(data.error || "Signup failed");
