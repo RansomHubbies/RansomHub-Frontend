@@ -175,17 +175,17 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
 
   return (
     <div className="w-1/4 bg-gray-200 border-r h-full overflow-y-auto flex flex-col">
-      <div className="p-4 border-b bg-white">
+      {/* <div className="p-4 border-b bg-white">
         <h1 className="text-xl font-semibold text-gray-900">Chats</h1>
-      </div>
+      </div> */}
       {/* Display logged-in username at the top */}
-      {loggedInUserName && (
+      {/* {loggedInUserName && (
         <div className="p-4 bg-white border-b">
           <h2 className="font-semibold text-gray-700">Logged in as:</h2>
           <p className="text-gray-800">{loggedInUserName}</p>
         </div>
-      )}
-
+      )} */}
+      
       <div className="p-2 border-b bg-white">
         <button
           className="w-full bg-green-500 text-white py-2 rounded-md font-medium"
