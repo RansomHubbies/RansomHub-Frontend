@@ -58,7 +58,7 @@ export const createGroup = async (groupName: string, members: string[]) => {
 };
 export const fetchGroups = async (username: string | null) => {
   try {
-    console.log("username:", username);
+    // console.log("username:", username);
     if (!username){
       return []
     }
@@ -258,13 +258,78 @@ export const sendMessage = async (sender: string, recipient: string, message: st
   }
 };
 
+const encryptGroupMessage = async (sender: string, group: string, message: string) => {
+  const groupMembers = await fetchGroups(sender);
+  const groupMemberUsernames = groupMembers.find((g: any) => g.username === group)?.members || [];
+  const groupMemberKeys = await Promise.all(
+    groupMemberUsernames.map(async (member: string) => {
+      const peer_public_key = await get_peer_public_key(member);
+      return { username: member, publicKey: peer_public_key.public_key };
+    })
+  );
+  const sharedSecretPromises = groupMemberKeys.map((member: any) =>
+    ecdhKeyExchange(sender, member.publicKey)
+  );
+  const sharedSecrets = await Promise.all(sharedSecretPromises);
+  const iv = crypto.getRandomValues(new Uint8Array(16));
+  const encoder = new TextEncoder();
+  const encodedMessage = encoder.encode(message);
+  const encryptedMessages = await Promise.all(
+    sharedSecrets.map((sharedSecret: any) =>
+      encryptWithAESGCM(sharedSecret, encodedMessage, iv)
+    )
+  );
+  const encryptedMessagesBase64 = encryptedMessages.map((encryptedMessage: any) =>
+    btoa(String.fromCharCode(...new Uint8Array(encryptedMessage)))
+  );
+  const ivBase64 = btoa(String.fromCharCode(...new Uint8Array(iv)));
+  return { encryptedMessagesBase64, ivBase64 };
+};
+
+export const decryptGroupMessage = async (username: string, sender: string, encryptedMessagesBase64: string[], ivBase64: string) => {
+  try {
+    const groupMembers = await fetchGroups(username);
+    const groupMemberUsernames = groupMembers.find((g: any) => g.username === sender)?.members || [];
+
+    const groupMemberKeys = await Promise.all(
+      groupMemberUsernames.map(async (member: string) => {
+        const peer_public_key = await get_peer_public_key(member);
+        return { username: member, publicKey: peer_public_key.public_key };
+      })
+    );
+    const sharedSecretPromises = groupMemberKeys.map((member: any) =>
+      ecdhKeyExchange(username, member.publicKey)
+    );
+    const sharedSecrets = await Promise.all(sharedSecretPromises);
+    const ivBytes = convertBase64toUint8Array(ivBase64);
+    const encryptedMessagesRaw = encryptedMessagesBase64.map((encryptedMessageBase64: string) =>
+      convertBase64toUint8Array(encryptedMessageBase64)
+    );
+    const decryptedMessages = await Promise.all(
+      encryptedMessagesRaw.map((encryptedMessageRaw: any, index: number) =>
+        decryptWithAESGCM(sharedSecrets[index], encryptedMessageRaw, ivBytes)
+      )
+    );
+    const decodedMessages = decryptedMessages.map((decryptedMessage: any) =>
+      new TextDecoder().decode(decryptedMessage)
+    );
+    return decodedMessages;
+  } catch (error) {
+    console.log("Error in decrypt group message: ", error);
+    throw error;
+  }
+};
+
 export const sendGroupMessage = async (sender: string, group: string, message: string) => {
   try {
-    console.log("Sender in api:", sender);
-    console.log("group:", group);
-    console.log("Message:", message);
+    // console.log("Sender in api:", sender);
+    // console.log("group:", group);
+    // console.log("Message:", message);
     const token = localStorage.getItem("access_token");
     const csrfToken = getCSRFTokenFromCookie();
+
+    const { encryptedMessagesBase64, ivBase64 } = await encryptGroupMessage(sender, group, message);
+
     const response = await fetch(`${API_URL}chat/send_group_message`, {
       method: "POST",
       headers: {
@@ -279,7 +344,7 @@ export const sendGroupMessage = async (sender: string, group: string, message: s
       }),
       credentials: "include",
     });
-    console.log("Response status:", response);
+    // console.log("Response status:", response);
     if (!response.ok) {
       const errorDetails = await response.json();
       console.error("API error:", errorDetails);

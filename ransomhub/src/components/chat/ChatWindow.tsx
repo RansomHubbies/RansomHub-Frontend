@@ -139,7 +139,10 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
     const channel = pusher.subscribe(loggedInUser);
 
     channel.bind(chatId, async(data: { message: string, sender: string, iv: string }) => {
-      const decryptedMessage = await decryptMessage(loggedInUser, data.sender, data.message, data.iv)
+      var decryptedMessage = data.message;
+      if (!isGroup) {
+        decryptedMessage = await decryptMessage(loggedInUser, data.sender, data.message, data.iv)
+      }
       setMessages(prevMessages => [
         ...prevMessages,
         { 
