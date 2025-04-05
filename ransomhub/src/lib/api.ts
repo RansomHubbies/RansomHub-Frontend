@@ -1,5 +1,5 @@
 import { group } from "console";
-import {convertBase64toUint8Array, getCSRFTokenFromCookie, openKeyDatabase} from "../app/api"
+import {convertBase64toUint8Array, decryptWithAESGCM, encryptWithAESGCM, getCSRFTokenFromCookie, openKeyDatabase} from "../app/api"
 
 const API_URL = 'http://127.0.0.1:8000/api/'
 export const fetchUsers = async () => {
@@ -97,7 +97,7 @@ const get_peer_public_key = async(peer_username: string) => {
       },
       credentials: "include",
     });
-    console.log("Response status:", response);
+    // console.log("Response status:", response);
     if (!response.ok) {
       const errorDetails = await response.json();
       console.error("API error:", errorDetails);
@@ -113,8 +113,8 @@ const get_peer_public_key = async(peer_username: string) => {
 const retrievePrivateKey = async(username:string) => {
 
     try {
-      const base64PrivateKwey = sessionStorage.getItem(`${username}_private_key`)
-      const privateKeyRaw = await convertBase64toUint8Array(base64PrivateKwey);
+      const base64PrivateKey = sessionStorage.getItem(`${username}_private_key`)
+      const privateKeyRaw = convertBase64toUint8Array(base64PrivateKey);
 
       const privateKey = await crypto.subtle.importKey(
         "pkcs8",
@@ -123,13 +123,13 @@ const retrievePrivateKey = async(username:string) => {
           name: "ECDH",
           namedCurve: "P-256",
         },
-        false,
+        true,
         ["deriveBits"]
       )
 
       return privateKey;
     } catch (error) {
-      console.log("Error in Retrieve Private Key: ", error);
+      console.log("Error in Retrieve Private Key: ", error, username);
       throw error;
     }
 }
@@ -168,21 +168,64 @@ const ecdhKeyExchange = async (username: string, publicKeyBase64: string) => {
             256
         );
 
-        console.log("Derived Shared Secret:", btoa(String.fromCharCode(...new Uint8Array(sharedSecret))));
-        return sharedSecret;
+        const derivedKey = await crypto.subtle.importKey(
+          "raw",
+          sharedSecret,
+          {
+            name: "AES-GCM",
+            length: 256,
+          },
+          true,
+          ["encrypt", "decrypt"]
+        );
+
+        // console.log("Derived Shared Secret:", btoa(String.fromCharCode(...new Uint8Array(sharedSecret))));
+        return derivedKey;
     } catch (error) {
         console.error("Error during ECDH key exchange:", error);
     }
 };
 
+const encryptMessage = async (sender: string, recipient: string, message: string) => {
+    const peer_public_key = await get_peer_public_key(recipient);
+
+    const sharedSecret = await ecdhKeyExchange(sender, peer_public_key.public_key);
+    const iv = crypto.getRandomValues(new Uint8Array(16));
+
+    const encoder = new TextEncoder();
+    const encodedMessage = encoder.encode(message);
+
+    const encryptedMessageRaw = await encryptWithAESGCM(sharedSecret, encodedMessage, iv);
+
+    const encryptedMessage = btoa(String.fromCharCode(...new Uint8Array(encryptedMessageRaw)));
+    const ivBase64 = btoa(String.fromCharCode(...new Uint8Array(iv)));
+
+    return {encryptedMessage, ivBase64};
+};
+
+export const decryptMessage = async(username: string, sender: string, encryptedMessageBase64: string, ivBase64: string) => {
+  try {
+    const peer_public_key = await get_peer_public_key(sender);
+    const sharedSecret = await ecdhKeyExchange(username, peer_public_key.public_key);
+
+    const ivBytes = convertBase64toUint8Array(ivBase64);
+    const encryptedMessageRaw = convertBase64toUint8Array(encryptedMessageBase64);
+
+    const decryptedMessageRaw = await decryptWithAESGCM(sharedSecret, encryptedMessageRaw, ivBytes);
+    const decodedMessage = new TextDecoder().decode(decryptedMessageRaw);
+
+    return decodedMessage;
+  } catch (error) {
+    console.log("Error in decrypt message: ", error);
+    throw(error);
+  }
+};
+
 
 export const sendMessage = async (sender: string, recipient: string, message: string) => {
   try {
-    
-    const peer_public_key = await get_peer_public_key(recipient);
-    console.log("Recipient Pub Key: ", peer_public_key.public_key);
-
-    const sharedSecret = await ecdhKeyExchange(sender, peer_public_key.public_key);
+  
+    const {encryptedMessage, ivBase64} = await encryptMessage(sender, recipient, message);
 
     const token = localStorage.getItem("access_token");
     const csrfToken = getCSRFTokenFromCookie();
@@ -197,11 +240,12 @@ export const sendMessage = async (sender: string, recipient: string, message: st
       body: JSON.stringify({
         sender: sender,
         recipient: recipient,
-        message: message,
+        message: encryptedMessage,
+        iv: ivBase64,
       }),
 
     });
-    console.log("Response status:", response);
+    // console.log("Response status:", response);
     if (!response.ok) {
       const errorDetails = await response.json();
       console.error("API error:", errorDetails);

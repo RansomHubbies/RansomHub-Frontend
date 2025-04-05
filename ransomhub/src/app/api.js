@@ -80,7 +80,7 @@ export const openKeyDatabase = () => {
     });
   };
 
-export const convertBase64toUint8Array = async(b64String) => {
+export const convertBase64toUint8Array = (b64String) => {
     const binaryString = atob(b64String);
     const buffer = new Uint8Array(binaryString.length);
     for (let i = 0; i < binaryString.length; i++) {
@@ -119,7 +119,7 @@ const deriveKey = async(password, salt) => {
 
 };
 
-const encryptWithAESGCM = async (key, data, iv) => {
+export const encryptWithAESGCM = async (key, data, iv) => {
     const encryptedData = await crypto.subtle.encrypt(
         {
             name: "AES-GCM",
@@ -132,7 +132,7 @@ const encryptWithAESGCM = async (key, data, iv) => {
     return encryptedData;
 };
 
-const decryptWithAESGCM = async (key, data, iv) => {
+export const decryptWithAESGCM = async (key, data, iv) => {
     const decryptedData = await crypto.subtle.decrypt(
         {
             name: "AES-GCM",
@@ -170,9 +170,9 @@ const encryptPrivateKey = async (privateKey, password, salt) => {
 const decryptPrivateKey = async (encryptedPrivateKeyBase64, password, saltBase64) => {
 
     try {
-        const salt = await convertBase64toUint8Array(saltBase64);
+        const salt = convertBase64toUint8Array(saltBase64);
         const derivedKey = await deriveKey(password, salt)
-        const encryptedPrivateKeyBuffer = await convertBase64toUint8Array(encryptedPrivateKeyBase64);
+        const encryptedPrivateKeyBuffer = convertBase64toUint8Array(encryptedPrivateKeyBase64);
 
         const decryptedPrivateKey = await decryptWithAESGCM(derivedKey, encryptedPrivateKeyBuffer, salt);
         const privateKeyRaw = decryptedPrivateKey;

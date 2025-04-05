@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import MessageInput from "./MessageInput";
-import { sendMessage, sendGroupMessage } from "../../lib/api";
+import { sendMessage, sendGroupMessage, decryptMessage } from "../../lib/api";
 import Pusher from "pusher-js";
 
 interface Message {
@@ -9,6 +9,7 @@ interface Message {
   recipient: string;
   message: string;
   timestamp: string;
+  iv: string;
   isMe?: boolean;
 }
 
@@ -26,9 +27,9 @@ declare global {
 }
 
 export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: string, chatName: string, isGroup: boolean }) {
-  console.log("Chat ID:", chatId);
-  console.log("Chat Name:", chatName);
-  console.log("Is Group:", isGroup);
+  // console.log("Chat ID:", chatId);
+  // console.log("Chat Name:", chatName);
+  // console.log("Is Group:", isGroup);
   const initialUser = localStorage.getItem("username") || null;
   const [loggedInUser, setLoggedInUser] = useState(initialUser);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
@@ -57,17 +58,36 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
           const sortedMessages = data.sort((a, b) => 
             new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
           );
+
+          const decryptedMessages = await Promise.all(
+            sortedMessages.map(async (msg) => {
+              try {
+                const decryptedText = await decryptMessage(
+                  loggedInUser,
+                  chatId,
+                  msg.message,
+                  msg.iv,
+                );
+                return {
+                  sender: msg.sender,
+                  text: decryptedText,
+                  isMe: msg.sender === loggedInUser,
+                  timestamp: msg.timestamp,
+                };
+              } catch (error) {
+                console.error("Error decrypting message:", error);
+                return {
+                  sender: msg.sender,
+                  text: "[Failed to decrypt]",
+                  isMe: msg.sender === loggedInUser,
+                  timestamp: msg.timestamp,
+                };
+              }
+            })
+          );
           
-          // Convert to display format and determine if message is from logged-in user
-          const formattedMessages: DisplayMessage[] = sortedMessages.map(msg => ({
-            sender: msg.sender,
-            text: msg.message,
-            isMe: msg.sender === loggedInUser,
-            timestamp: msg.timestamp
-          }));
-          
-          setMessages(formattedMessages);
-          console.log("Fetched and loaded", formattedMessages.length, "messages");
+          setMessages(decryptedMessages);
+          console.log("Fetched and loaded", decryptedMessages.length, "messages");
         }
         else {
           const response = await fetch(`http://127.0.0.1:8000/api/chat/get_group_messages?group=${chatId}`);
@@ -118,13 +138,13 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
 
     const channel = pusher.subscribe(loggedInUser);
 
-    channel.bind(chatId, (data: { message: string, sender: string }) => {
-      // Update the chat in real-time with new messages
+    channel.bind(chatId, async(data: { message: string, sender: string, iv: string }) => {
+      const decryptedMessage = await decryptMessage(loggedInUser, data.sender, data.message, data.iv)
       setMessages(prevMessages => [
         ...prevMessages,
         { 
           sender: data.sender || chatId, // Use the sender from data if available
-          text: data.message, 
+          text: decryptedMessage, 
           isMe: false 
         },
       ]);
