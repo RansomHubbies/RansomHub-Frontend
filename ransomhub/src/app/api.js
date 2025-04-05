@@ -56,7 +56,7 @@ const generateECDHKeyPair = async () => {
 
         return {
             keyPair,
-            publicKeyBase64
+            publicKeyBase64,
         };
     } catch (error) {
         console.error("Error generating ECDH key pair:", error);
@@ -80,58 +80,174 @@ export const openKeyDatabase = () => {
     });
   };
 
-  const storePrivateKey = async (username, privateKey) => {
-    try {
-      const db = await openKeyDatabase();
-      const privateKeyRaw = await window.crypto.subtle.exportKey("pkcs8", privateKey);
+//   const storePrivateKey = async (username, privateKey) => {
+//     try {
+//       const db = await openKeyDatabase();
+//       const privateKeyRaw = await window.crypto.subtle.exportKey("pkcs8", privateKey);
 
-      return new Promise((resolve, reject) => {
-          const transaction = db.transaction(["keys"], "readwrite");
-          const store = transaction.objectStore("keys");
+//       return new Promise((resolve, reject) => {
+//           const transaction = db.transaction(["keys"], "readwrite");
+//           const store = transaction.objectStore("keys");
 
-          const request = store.put({
-            username: username,
-            key: privateKeyRaw,
-            createdAt: new Date().toISOString()
-          });
+//           const request = store.put({
+//             username: username,
+//             key: privateKeyRaw,
+//             createdAt: new Date().toISOString()
+//           });
 
-          request.onsuccess = () => {
-            console.log("Key inserted");
-          };
+//           request.onsuccess = () => {
+//             console.log("Key inserted");
+//           };
 
-          request.onerror = (event) => {
-            console.error("Key insert error:", event.target.error);
-            reject(event.target.error);
-          };
+//           request.onerror = (event) => {
+//             console.error("Key insert error:", event.target.error);
+//             reject(event.target.error);
+//           };
   
-          transaction.oncomplete = () => resolve(true);
-          transaction.onerror = (event) => reject(event.target.error);
-      });
-    } catch (error) {
-      console.error("Error storing private key:", error);
-      throw error;
+//           transaction.oncomplete = () => resolve(true);
+//           transaction.onerror = (event) => reject(event.target.error);
+//       });
+//     } catch (error) {
+//       console.error("Error storing private key:", error);
+//       throw error;
+//     }
+//   };
+
+const convertBase64toUint8Array = async(b64String) => {
+    const binaryString = atob(b64String);
+    const buffer = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+        buffer[i] = binaryString.charCodeAt(i);
     }
-  };
+
+    return buffer;
+}
+
+const deriveKey = async(password, salt) => {
+    const encoder = new TextEncoder();
+    const passwordBuffer = encoder.encode(password);
+
+    const keyMaterial = await crypto.subtle.importKey(
+        "raw", 
+        passwordBuffer, 
+        { name: "PBKDF2" }, 
+        false, 
+        ["deriveBits", "deriveKey"]
+    );
+
+    const derivedKey = await crypto.subtle.deriveKey(
+        {
+            name: "PBKDF2",
+            salt: salt,
+            iterations: 100000,
+            hash: "SHA-256"
+        },
+        keyMaterial,
+        { name: "AES-GCM", length: 256 },
+        true,
+        ["encrypt", "decrypt"]
+    );
+
+    return derivedKey;
+
+};
+
+const encryptWithAESGCM = async (key, data, iv) => {
+    const encryptedData = await crypto.subtle.encrypt(
+        {
+            name: "AES-GCM",
+            iv: iv
+        },
+        key,
+        data
+    );
+
+    return encryptedData;
+};
+
+const decryptWithAESGCM = async (key, data, iv) => {
+    const decryptedData = await crypto.subtle.decrypt(
+        {
+            name: "AES-GCM",
+            iv: iv
+        },
+        key,
+        data
+    );
+
+    return decryptedData;
+}
+
+
+const encryptPrivateKey = async (privateKey, password, salt) => {
+
+    try{
+        const password_derived_key = await deriveKey(password, salt);
+
+        const privateKeyRaw = await window.crypto.subtle.exportKey("pkcs8", privateKey);
+        const encryptedPrivateKey = await encryptWithAESGCM(password_derived_key, privateKeyRaw, salt);
+
+        const encryptedPrivateKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(encryptedPrivateKey)));
+        const saltBase64 = btoa(String.fromCharCode(...new Uint8Array(salt)));
+        
+        return {
+            encryptedPrivateKeyBase64,
+            saltBase64
+        }
+    } catch (error) {
+        console.log("Error in encrypting Private Key:", error);
+        throw error;
+    }
+};
+
+const decryptPrivateKey = async (encryptedPrivateKeyBase64, password, saltBase64) => {
+
+    try {
+        const salt = await convertBase64toUint8Array(saltBase64);
+        const derivedKey = await deriveKey(password, salt)
+        const encryptedPrivateKeyBuffer = await convertBase64toUint8Array(encryptedPrivateKeyBase64);
+
+        const decryptedPrivateKey = await decryptWithAESGCM(derivedKey, encryptedPrivateKeyBuffer, salt);
+        const privateKeyRaw = decryptedPrivateKey;
+
+        return privateKeyRaw;
+    } catch (error) {
+        console.log("Error in decrypting Private Key:", error);
+        throw error;
+    }
+
+};
 
 
 export const signup = async (name,username, email, password,phone) => {
     try {
 
+        const salt = crypto.getRandomValues(new Uint8Array(16));
         const { keyPair, publicKeyBase64 } = await generateECDHKeyPair();
+        const { encryptedPrivateKeyBase64, saltBase64 } = await encryptPrivateKey(keyPair.privateKey, password, salt);
 
         const csrfToken = getCSRFTokenFromCookie();
         const response = await fetch(`${API_URL}/users/signup/`, {
             method: "POST",
             headers: { "Content-Type": "application/json","X-CSRFToken": csrfToken, },
             credentials: "include",
-            body: JSON.stringify({ name,username, email, password, phone, public_key: publicKeyBase64 }),
+            body: JSON.stringify({ 
+                name,
+                username, 
+                email, 
+                password, 
+                phone, 
+                public_key: publicKeyBase64,
+                encrypted_private_key: encryptedPrivateKeyBase64,
+                private_key_salt: saltBase64,
+             }),
         });
         
         const data = await response.json();
         console.log("Signup API Response:", data);
 
         if (response.status === 201) {
-            await storePrivateKey(username, keyPair.privateKey)
+            // await storePrivateKey(username, keyPair.privateKey)
             return data;  // 
         } else {
             throw new Error(data.error || "Signup failed");
@@ -190,12 +306,10 @@ export const resendOtp = async (email) => {
         } else {
             throw new Error(data.error || "Failed to resend OTP");
         }
-    } catch (error) {
-        return { error: error.message || "Something went wrong" };
+    } catch (error) {const privateKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(privateKeyRaw)));
+
     }
 };
-
-
 
 
 export const login = async (email, password) => {
@@ -212,6 +326,11 @@ export const login = async (email, password) => {
         console.log("Login API Response:", data);
 
         if (response.status === 200) {
+            
+            const privateKeyRaw = await decryptPrivateKey(data.encrypted_private_key, password, data.private_key_salt);
+            console.log("Private Key Raw: ", privateKeyRaw);
+            const privateKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(privateKeyRaw)));
+            sessionStorage.setItem("private_key", privateKeyBase64);
             localStorage.setItem("access_token", data.access_token);
             localStorage.setItem("refresh_token", data.refresh_token);
             return data;
@@ -239,6 +358,7 @@ export const logout = async () => {
 
         const data = await response.json();
         if (response.status === 200) {
+            sessionStorage.removeItem("private_key");
             localStorage.removeItem("access_token"); 
             localStorage.removeItem("refresh_token");
             console.log("Logged out successfully");
