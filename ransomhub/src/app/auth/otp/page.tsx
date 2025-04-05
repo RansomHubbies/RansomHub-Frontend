@@ -9,6 +9,7 @@ export default function OtpPage() {
   const [loading, setLoading] = useState(false);
   const [resend, setResend] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const router = useRouter();
   const [email, setEmail] = useState("");
 
@@ -25,13 +26,15 @@ export default function OtpPage() {
   const onSubmit = async (data: any) => {
     setLoading(true);
     setErrorMessage("");
+    setSuccessMessage("");
 
     const result = await verifyOtp(email, data.otp);
 
-    if (result.token) {
+    if (!result.error) {
+      setSuccessMessage("User can log in now.");
       localStorage.setItem("token", result.token);
       localStorage.removeItem("otpEmail");
-      router.push("/");
+      router.push("/auth/login");
     } else {
       setErrorMessage(result.error || "OTP failed. Please try again.");
     }
@@ -71,6 +74,9 @@ export default function OtpPage() {
 
         {errorMessage && (
           <p className="text-red-500 text-sm text-center mt-2">{errorMessage}</p>
+        )}
+        {successMessage && (
+          <p className="text-green-500 text-sm text-center mt-2">{successMessage}</p>
         )}
 
         <form onSubmit={handleSubmit(onSubmit)} className="mt-4">
