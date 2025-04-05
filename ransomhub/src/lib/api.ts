@@ -1,5 +1,5 @@
 import { group } from "console";
-import {getCSRFTokenFromCookie, openKeyDatabase} from "../app/api"
+import {convertBase64toUint8Array, getCSRFTokenFromCookie, openKeyDatabase} from "../app/api"
 
 const API_URL = 'http://127.0.0.1:8000/api/'
 export const fetchUsers = async () => {
@@ -111,42 +111,27 @@ const get_peer_public_key = async(peer_username: string) => {
 };
 
 const retrievePrivateKey = async(username:string) => {
-    return new Promise(async (resolve, reject) => {
-        try {
-            const db = await openKeyDatabase();
-            const transaction = db.transaction(["keys"], "readonly");
-            const store = transaction.objectStore("keys");
 
-            const request = store.get(username);
+    try {
+      const base64PrivateKwey = sessionStorage.getItem(`${username}_private_key`)
+      const privateKeyRaw = await convertBase64toUint8Array(base64PrivateKwey);
 
-            request.onsuccess = async () => {
-                if (!request.result) {
-                    reject("No private key found for this user.");
-                    return;
-                }
+      const privateKey = await crypto.subtle.importKey(
+        "pkcs8",
+        privateKeyRaw,
+        {
+          name: "ECDH",
+          namedCurve: "P-256",
+        },
+        false,
+        ["deriveBits"]
+      )
 
-                const privateKeyRaw = request.result.key;
-
-                // Import the private key
-                const privateKey = await crypto.subtle.importKey(
-                    "pkcs8",
-                    privateKeyRaw,
-                    {
-                        name: "ECDH",
-                        namedCurve: "P-256",
-                    },
-                    false, // Not extractable for security
-                    ["deriveBits"]
-                );
-
-                resolve(privateKey);
-            };
-
-            request.onerror = () => reject(request.error);
-        } catch (error) {
-            reject(error);
-        }
-    });
+      return privateKey;
+    } catch (error) {
+      console.log("Error in Retrieve Private Key: ", error);
+      throw error;
+    }
 }
 
 const ecdhKeyExchange = async (username: string, publicKeyBase64: string) => {

@@ -80,40 +80,7 @@ export const openKeyDatabase = () => {
     });
   };
 
-//   const storePrivateKey = async (username, privateKey) => {
-//     try {
-//       const db = await openKeyDatabase();
-//       const privateKeyRaw = await window.crypto.subtle.exportKey("pkcs8", privateKey);
-
-//       return new Promise((resolve, reject) => {
-//           const transaction = db.transaction(["keys"], "readwrite");
-//           const store = transaction.objectStore("keys");
-
-//           const request = store.put({
-//             username: username,
-//             key: privateKeyRaw,
-//             createdAt: new Date().toISOString()
-//           });
-
-//           request.onsuccess = () => {
-//             console.log("Key inserted");
-//           };
-
-//           request.onerror = (event) => {
-//             console.error("Key insert error:", event.target.error);
-//             reject(event.target.error);
-//           };
-  
-//           transaction.oncomplete = () => resolve(true);
-//           transaction.onerror = (event) => reject(event.target.error);
-//       });
-//     } catch (error) {
-//       console.error("Error storing private key:", error);
-//       throw error;
-//     }
-//   };
-
-const convertBase64toUint8Array = async(b64String) => {
+export const convertBase64toUint8Array = async(b64String) => {
     const binaryString = atob(b64String);
     const buffer = new Uint8Array(binaryString.length);
     for (let i = 0; i < binaryString.length; i++) {
@@ -330,7 +297,7 @@ export const login = async (email, password) => {
             const privateKeyRaw = await decryptPrivateKey(data.encrypted_private_key, password, data.private_key_salt);
             console.log("Private Key Raw: ", privateKeyRaw);
             const privateKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(privateKeyRaw)));
-            sessionStorage.setItem("private_key", privateKeyBase64);
+            sessionStorage.setItem(`${data.username}_private_key`, privateKeyBase64);
             localStorage.setItem("access_token", data.access_token);
             localStorage.setItem("refresh_token", data.refresh_token);
             return data;
@@ -358,7 +325,7 @@ export const logout = async () => {
 
         const data = await response.json();
         if (response.status === 200) {
-            sessionStorage.removeItem("private_key");
+            sessionStorage.clear();
             localStorage.removeItem("access_token"); 
             localStorage.removeItem("refresh_token");
             console.log("Logged out successfully");
