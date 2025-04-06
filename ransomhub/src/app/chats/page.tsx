@@ -148,14 +148,28 @@ import ChatSidebar from "@/components/chat/ChatSidebar";
 import ChatWindow from "@/components/chat/ChatWindow";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { fetchUsers } from "@/lib/api";
 
 export default function ChatPage() {
   const [selectedChat, setSelectedChat] = useState<{ id: string, name: string, isGroup: boolean } | null>(null);
   const [loggedInUser, setLoggedInUser] = useState<string | null>(null);
 
   useEffect(() => {
-    const username = localStorage.getItem("username");
-    if (username) setLoggedInUser(username);
+    // Retrieve the stored username (which is the unique identifier)
+    const storedUsername = localStorage.getItem("username");
+    if (storedUsername) {
+      // Use fetchUsers to get full user details and find the full name
+      fetchUsers()
+        .then((usersData) => {
+          const userObj = usersData.find((user: any) => user.username === storedUsername);
+          if (userObj && userObj.name) {
+            setLoggedInUser(userObj.name);
+          } else {
+            setLoggedInUser(storedUsername);
+          }
+        })
+        .catch((err) => console.error("Error fetching user details:", err));
+    }
   }, []);
 
   const handleSelectChat = (chatId: string, chatName: string, isGroup: boolean) => {
@@ -164,20 +178,19 @@ export default function ChatPage() {
 
   return (
     <div className="flex flex-col h-screen">
-      {/* Navbar */}
-      <nav className="bg-white w-full shadow-md border-b border-gray-300">
-        <div className="max-w-5xl mx-auto flex justify-between items-center py-4 px-1">
-          <h1 className="text-xl font-semibold text-gray-800">Chats: {loggedInUser}</h1>
-          <div className="space-x-6">
-            <Link href="/" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-              Home
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <div className="bg-white text-gray-800 px-6 py-3 flex justify-between items-center shadow-lg border-b border-gray-300">
+      {/* <h1 className="text-lg font-semibold">Chats: {loggedInUser}</h1> */}
+      <h1 className="text-xl font-semibold text-gray-800">Chats</h1>
+      <button
+        className="bg-blue-600 text-white px-4 py-2 rounded font-medium hover:bg-blue-700"
+        onClick={() => (window.location.href = "/")}
+      >
+        Home
+      </button>
+    </div>
 
       {/* Main Chat Layout */}
-      <div className="flex h-full">
+      <div className="flex flex-1 overflow-hidden">
         <ChatSidebar onSelectChat={handleSelectChat} />
         <div className="flex-1 flex flex-col">
           {selectedChat ? (

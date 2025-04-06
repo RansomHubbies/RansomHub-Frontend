@@ -41,7 +41,7 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
   const [selectedGroupInfo, setSelectedGroupInfo] = useState<Chat | null>(null);
   const [loading, setLoading] = useState(true);
   const [loggedInUserName, setLoggedInUserName] = useState<string | null>(null);
-
+  const storedUsername = localStorage.getItem("username");
   useEffect(() => {
     // Fetch logged-in username from localStorage
     const loggedInUser = localStorage.getItem("username");
@@ -57,7 +57,7 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
         const loggedInUser = localStorage.getItem("username");
         const [usersData, groupsData] = await Promise.all([
           fetchUsers(),
-          fetchGroups(loggedInUser)
+          fetchGroups(storedUsername)
         ]);
 
         // Format users
@@ -68,6 +68,12 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
         }));
 
         setUsers(formattedUsers);
+        if (storedUsername) {
+          const currentUser = formattedUsers.find((user: User) => user.username === storedUsername);
+          if (currentUser) {
+            setLoggedInUserName(currentUser.name);
+          }
+        }
 
         // Format groups
         setGroups(groupsData);
@@ -147,7 +153,7 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
     if (selectedGroupInfo) {
       const memberUsernames = newMembers.map(m => m.username);
       try {
-        await addGroupMembers(selectedGroupInfo.id, memberUsernames); // group_username = selectedGroupInfo.id
+        await addGroupMembers(selectedGroupInfo.id, memberUsernames);
         const updatedGroup = {
           ...selectedGroupInfo,
           members: [...(selectedGroupInfo.members || []), ...newMembers],
@@ -175,16 +181,16 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
 
   return (
     <div className="w-1/4 bg-gray-200 border-r h-full overflow-y-auto flex flex-col">
-      {/* <div className="p-4 border-b bg-white">
-        <h1 className="text-xl font-semibold text-gray-900">Chats</h1>
-      </div> */}
-      {/* Display logged-in username at the top */}
-      {/* {loggedInUserName && (
-        <div className="p-4 bg-white border-b">
-          <h2 className="font-semibold text-gray-700">Logged in as:</h2>
-          <p className="text-gray-800">{loggedInUserName}</p>
+      {loggedInUserName && (
+        <div className="p-4 flex items-center border-b bg-white">
+          <img
+            src="/pro.jpeg"
+            alt="Profile"
+            className="w-4 h-4 rounded-full mr-3"
+          />
+          <span className="text-gray-800 font-semibold">{loggedInUserName}</span>
         </div>
-      )} */}
+      )}
       
       <div className="p-2 border-b bg-white">
         <button

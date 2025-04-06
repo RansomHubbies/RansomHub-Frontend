@@ -1,17 +1,14 @@
 "use client";
 import { useState, useEffect } from "react";
 import MessageInput from "./MessageInput";
-import { sendMessage, sendGroupMessage, decryptMessage, fetchUsers } from "../../lib/api";
+import { sendMessage, sendGroupMessage, fetchUsers } from "../../lib/api";
 import Pusher from "pusher-js";
-import { Cookie } from "next/font/google";
-import { getCSRFTokenFromCookie } from "@/app/api";
 
 interface Message {
   sender: string;
   recipient: string;
   message: string;
   timestamp: string;
-  iv: string;
   isMe?: boolean;
 }
 
@@ -29,13 +26,14 @@ declare global {
 }
 
 export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: string, chatName: string, isGroup: boolean }) {
-  // console.log("Chat ID:", chatId);
-  // console.log("Chat Name:", chatName);
-  // console.log("Is Group:", isGroup);
+  console.log("Chat ID:", chatId);
+  console.log("Chat Name:", chatName);
+  console.log("Is Group:", isGroup);
   const initialUser = localStorage.getItem("username") || null;
   const [loggedInUser, setLoggedInUser] = useState(initialUser);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [loading, setLoading] = useState(false);
+
   const [showUserInfo, setShowUserInfo] = useState(false);
   const [selectedUserDetails, setSelectedUserDetails] = useState<any>(null);
   // Fetch previous messages when chat changes
@@ -49,18 +47,9 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
       setLoading(true);
       try {
         if (!isGroup){
-          const response = await fetch(`http://127.0.0.1:8000/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`, {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-              "X-CSRFToken": getCSRFTokenFromCookie(),
-              "Content-Type": "application/json",
-            },
-            credentials: "include",
-          });
+          const response = await fetch(`http://127.0.0.1:8000/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`);
           
           if (!response.ok) {
-            setMessages([]);
             throw new Error(`Error fetching messages: ${response.status}`);
           }
           
@@ -70,50 +59,22 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
           const sortedMessages = data.sort((a, b) => 
             new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
           );
-
-          const decryptedMessages = await Promise.all(
-            sortedMessages.map(async (msg) => {
-              try {
-                const decryptedText = await decryptMessage(
-                  loggedInUser,
-                  chatId,
-                  msg.message,
-                  msg.iv,
-                );
-                return {
-                  sender: msg.sender,
-                  text: decryptedText,
-                  isMe: msg.sender === loggedInUser,
-                  timestamp: msg.timestamp,
-                };
-              } catch (error) {
-                console.error("Error decrypting message:", error);
-                return {
-                  sender: msg.sender,
-                  text: "[Failed to decrypt]",
-                  isMe: msg.sender === loggedInUser,
-                  timestamp: msg.timestamp,
-                };
-              }
-            })
-          );
           
-          setMessages(decryptedMessages);
-          console.log("Fetched and loaded", decryptedMessages.length, "messages");
+          // Convert to display format and determine if message is from logged-in user
+          const formattedMessages: DisplayMessage[] = sortedMessages.map(msg => ({
+            sender: msg.sender,
+            text: msg.message,
+            isMe: msg.sender === loggedInUser,
+            timestamp: msg.timestamp
+          }));
+          
+          setMessages(formattedMessages);
+          console.log("Fetched and loaded", formattedMessages.length, "messages");
         }
         else {
-          const response = await fetch(`http://127.0.0.1:8000/api/chat/get_group_messages?group=${chatId}`, {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-              "X-CSRFToken": getCSRFTokenFromCookie(),
-              "Content-Type": "application/json",
-            },
-            credentials: "include",
-         });
+          const response = await fetch(`http://127.0.0.1:8000/api/chat/get_group_messages?group=${chatId}`);
           
           if (!response.ok) {
-            setMessages([]);
             throw new Error(`Error fetching messages: ${response.status}`);
           }
           
@@ -159,16 +120,13 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
 
     const channel = pusher.subscribe(loggedInUser);
 
-    channel.bind(chatId, async(data: { message: string, sender: string, iv: string }) => {
-      var decryptedMessage = data.message;
-      if (!isGroup) {
-        decryptedMessage = await decryptMessage(loggedInUser, data.sender, data.message, data.iv)
-      }
+    channel.bind(chatId, (data: { message: string, sender: string }) => {
+      // Update the chat in real-time with new messages
       setMessages(prevMessages => [
         ...prevMessages,
         { 
           sender: data.sender || chatId, // Use the sender from data if available
-          text: decryptedMessage, 
+          text: data.message, 
           isMe: false 
         },
       ]);
@@ -207,17 +165,17 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
     }
   };
   const handleOpenUserInfo = async () => {
-      try {
-        const usersData = await fetchUsers();
-        const user = usersData.find((u: any) => u.username === chatId);
-        if (user) {
-          setSelectedUserDetails(user);
-          setShowUserInfo(true);
-        }
-      } catch (error) {
-        console.error("Error fetching user info:", error);
+    try {
+      const usersData = await fetchUsers();
+      const user = usersData.find((u: any) => u.username === chatId);
+      if (user) {
+        setSelectedUserDetails(user);
+        setShowUserInfo(true);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching user info:", error);
+    }
+  };
   if (!loggedInUser) {
     return <div>Loading...</div>;
   }
@@ -226,7 +184,8 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
     <div className="flex flex-col h-full">
       <div className="p-4 border-b bg-white flex items-center justify-between">
         <h2 className="font-bold text-gray-900">{chatName}</h2>
-        {!isGroup && (
+         {/* Show Info button only for individual chats */}
+         {!isGroup && (
           <button
             className="text-blue-600 text-sm border border-blue-600 px-3 py-1 rounded hover:bg-blue-50"
             onClick={handleOpenUserInfo}
