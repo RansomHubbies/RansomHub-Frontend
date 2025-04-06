@@ -84,7 +84,7 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
 
           const decryptedMessages = await Promise.all(
             sortedMessages.map(async (msg) => {
-              if (msg.type === 'file') {
+              if (msg.type === 'file') {                
                 return {
                   sender: msg.sender,
                   text: `File: ${msg.filename}`,
@@ -212,25 +212,144 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
     }) => {
 
       if (data.type === 'file') {
-        setMessages(prevMessages => [
-          ...prevMessages,
-          {
-            sender: data.sender,
-            text: `File: ${data.filename}`,
-            isMe: data.sender === loggedInUser,
-            type: 'file',
-            file: data.file,
-            filename: data.filename,
-            fileType: data.file_type,
-            timestamp: new Date().toISOString()
+
+        const fetchMessages = async () => {
+          setLoading(true);
+          try {
+            if (!isGroup) {
+              const response = await fetch(`http://127.0.0.1:8000/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`, {
+                method: "GET",
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+                  "X-CSRFToken": getCSRFTokenFromCookie(),
+                  "Content-Type": "application/json",
+                },
+                credentials: "include",
+              });
+    
+              if (!response.ok) {
+                setMessages([]);
+                throw new Error(`Error fetching messages: ${response.status}`);
+              }
+    
+              const data: Message[] = await response.json();
+    
+              // Sort messages by timestamp (oldest first)
+              const sortedMessages = data.sort((a, b) =>
+                new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+              );
+    
+    
+              const decryptedMessages = await Promise.all(
+                sortedMessages.map(async (msg) => {
+                  if (msg.type === 'file') {                
+                    return {
+                      sender: msg.sender,
+                      text: `File: ${msg.filename}`,
+                      isMe: msg.sender === loggedInUser,
+                      timestamp: msg.timestamp,
+                      type: 'file',
+                      file: msg.file,
+                      filename: msg.filename,
+                      fileType: msg.file_type
+                    };
+                  }
+    
+                  try {
+                    const decryptedText = await decryptMessage(
+                      loggedInUser,
+                      chatId,
+                      msg.message,
+                      msg.iv,
+                    );
+                    return {
+                      sender: msg.sender,
+                      text: decryptedText,
+                      isMe: msg.sender === loggedInUser,
+                      timestamp: msg.timestamp,
+                    };
+                  } catch (error) {
+                    console.error("Error decrypting message:", error);
+                    return {
+                      sender: msg.sender,
+                      text: "[Failed to decrypt]",
+                      isMe: msg.sender === loggedInUser,
+                      timestamp: msg.timestamp,
+                    };
+                  }
+                })
+              );
+    
+    
+              setMessages(decryptedMessages);
+              console.log("Fetched and loaded", decryptedMessages.length, "messages");
+            }
+            else {
+              const response = await fetch(`http://127.0.0.1:8000/api/chat/get_group_messages?group=${chatId}`, {
+                method: "GET",
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+                  "X-CSRFToken": getCSRFTokenFromCookie(),
+                  "Content-Type": "application/json",
+                },
+                credentials: "include",
+              });
+    
+              if (!response.ok) {
+                setMessages([]);
+                throw new Error(`Error fetching messages: ${response.status}`);
+              }
+    
+              const data: Message[] = await response.json();
+    
+              // Sort messages by timestamp (oldest first)
+              const sortedMessages = data.sort((a, b) =>
+                new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+              );
+    
+              // Convert to display format and determine if message is from logged-in user
+              const formattedMessages: DisplayMessage[] = sortedMessages.map((msg) => {
+                if (msg.type === 'file') {
+                  return {
+                    sender: msg.sender,
+                    text: `File: ${msg.filename}`,
+                    isMe: msg.sender === loggedInUser,
+                    timestamp: msg.timestamp,
+                    type: 'file',
+                    file: msg.file,
+                    filename: msg.filename,
+                    fileType: msg.file_type,
+                    group: msg.group
+                  };
+                }
+                else {
+                  return {
+                    sender: msg.sender,
+                    text: msg.message,
+                    isMe: msg.sender === loggedInUser,
+                    timestamp: msg.timestamp
+                  };
+                }
+              });
+    
+              setMessages(formattedMessages);
+              console.log("Fetched and loaded", formattedMessages.length, "messages");
+            }
           }
-        ]);
+          catch (error) {
+            console.error("Failed to fetch messages:", error);
+          } finally {
+            setLoading(false);
+          }
+        };
+    
+        fetchMessages();
+
       } else {
         var decryptedMessage = data.message;
         if (!isGroup) {
           decryptedMessage = await decryptMessage(loggedInUser, data.sender, data.message, data.iv);
         }
-        // const decryptedMessage = await decryptMessage(loggedInUser, data.sender, data.message, data.iv);
         setMessages(prevMessages => [
           ...prevMessages,
           {

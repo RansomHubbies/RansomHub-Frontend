@@ -385,87 +385,11 @@ export const addGroupMembers = async (groupUsername: string, memberUsernames: st
   }
 };
 
-
-// Add these functions to your api.ts file
-
-// export const sendFile = async (sender: string, recipient: string, file: string, fileName: string, fileType: string) => {
-//   try {
-//     const { encryptedMessage, ivBase64 } = await encryptMessage(sender, recipient, "FILE_SENT_TO_CHAT");
-
-//     const token = localStorage.getItem("access_token");
-//     const csrfToken = getCSRFTokenFromCookie();
-//     const response = await fetch(`${API_URL}chat/send_file`, {
-//       method: "POST",
-//       headers: {
-//         "Content-Type": "application/json",
-//         "Authorization": `Bearer ${token}`,
-//         "X-CSRFToken": csrfToken,
-//       },
-//       credentials: "include",
-//       body: JSON.stringify({
-//         sender: sender,
-//         recipient: recipient,
-//         file: file,
-//         file_name: fileName,
-//         file_type: fileType,
-//         iv: ivBase64,
-//       }),
-//     });
-
-//     if (!response.ok) {
-//       const errorDetails = await response.json();
-//       console.error("API error:", errorDetails);
-//       throw new Error("Failed to send file");
-//     }
-//     return await response.json();
-//   } catch (error) {
-//     console.error("Error sending file:", error);
-//     throw error;
-//   }
-// };
-
-// export const sendGroupFile = async (sender: string, group: string, file: string, fileName: string, fileType: string) => {
-//   try {
-//     const { encryptedMessagesBase64, ivBase64 } = await encryptGroupMessage(sender, group, "FILE_SENT_TO_CHAT");
-
-//     const token = localStorage.getItem("access_token");
-//     const csrfToken = getCSRFTokenFromCookie();
-//     const response = await fetch(`${API_URL}chat/send_group_file`, {
-//       method: "POST",
-//       headers: {
-//         "Content-Type": "application/json",
-//         "Authorization": `Bearer ${token}`,
-//         "X-CSRFToken": csrfToken,
-//       },
-//       credentials: "include",
-//       body: JSON.stringify({
-//         sender: sender,
-//         group: group,
-//         file: file,
-//         file_name: fileName,
-//         file_type: fileType,
-//         iv: ivBase64,
-//       }),
-//     });
-
-//     if (!response.ok) {
-//       const errorDetails = await response.json();
-//       console.error("API error:", errorDetails);
-//       throw new Error("Failed to send file");
-//     }
-//     return await response.json();
-//   } catch (error) {
-//     console.error("Error sending file:", error);
-//     throw error;
-//   }
-// };
-
-
-
-
-
 export const sendFile = async (sender: string, recipient: string, file: string, fileName: string, fileType: string) => {
   try {
+
+    const {encryptedMessage, ivBase64} = await encryptMessage(sender, recipient, file);
+
     const token = localStorage.getItem("access_token");
     const csrfToken = getCSRFTokenFromCookie();
     const response = await fetch(`${API_URL}chat/send_file`, {
@@ -482,7 +406,7 @@ export const sendFile = async (sender: string, recipient: string, file: string, 
         file: file,
         file_name: fileName,
         file_type: fileType,
-        iv: "", // You might want to add encryption for files too
+        iv: ivBase64, // You might want to add encryption for files too
       }),
     });
 
