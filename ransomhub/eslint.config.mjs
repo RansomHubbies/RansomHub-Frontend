@@ -20,6 +20,8 @@ const eslintConfig = [
       "@typescript-eslint/no-explicit-any": "off", // Allow "any" type
       "no-console": "off", // Allow console logs
       "no-debugger": "off", // Allow debugger
+      "no-var": "off", // Allow var declaration
+      "@typescript-eslint/no-require-imports": "off",
     },
   },
 ];
