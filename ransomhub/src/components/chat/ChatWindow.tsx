@@ -3,9 +3,7 @@ import { useState, useEffect } from "react";
 import MessageInput from "./MessageInput";
 import { sendMessage, sendGroupMessage, decryptMessage, fetchUsers } from "../../lib/api";
 import Pusher from "pusher-js";
-import { Cookie } from "next/font/google";
 import { getCSRFTokenFromCookie } from "@/app/api";
-
 
 // Update the interfaces at the top of the file
 interface Message {
@@ -33,7 +31,6 @@ interface DisplayMessage {
   group?: string;
 }
 
-
 declare global {
   interface Window {
     pusherInstance: any;
@@ -41,17 +38,25 @@ declare global {
 }
 
 export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: string, chatName: string, isGroup: boolean }) {
-
-  const initialUser = localStorage.getItem("username") || null;
-  const [loggedInUser, setLoggedInUser] = useState(initialUser);
+  const [loggedInUser, setLoggedInUser] = useState<string | null>(null);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [showUserInfo, setShowUserInfo] = useState(false);
   const [selectedUserDetails, setSelectedUserDetails] = useState<any>(null);
+  const [isClient, setIsClient] = useState(false);
+  
+  // First check if we're on the client side
+  useEffect(() => {
+    setIsClient(true);
+    if (typeof window !== 'undefined') {
+      const username = localStorage.getItem("username");
+      setLoggedInUser(username);
+    }
+  }, []);
+
   // Fetch previous messages when chat changes
   useEffect(() => {
-    if (!chatId || !loggedInUser) {
-      console.log("Missing required data for chat history");
+    if (!isClient || !chatId || !loggedInUser) {
       return;
     }
 
@@ -80,7 +85,6 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
           const sortedMessages = data.sort((a, b) =>
             new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
           );
-
 
           const decryptedMessages = await Promise.all(
             sortedMessages.map(async (msg) => {
@@ -122,9 +126,7 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
             })
           );
 
-
           setMessages(decryptedMessages);
-          console.log("Fetched and loaded", decryptedMessages.length, "messages");
         }
         else {
           const response = await fetch(`http://127.0.0.1:8000/api/chat/get_group_messages?group=${chatId}`, {
@@ -175,7 +177,6 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
           });
 
           setMessages(formattedMessages);
-          console.log("Fetched and loaded", formattedMessages.length, "messages");
         }
       }
       catch (error) {
@@ -186,12 +187,11 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
     };
 
     fetchMessages();
-  }, [chatId, loggedInUser, isGroup]);
+  }, [chatId, loggedInUser, isGroup, isClient]);
 
   // Set up Pusher for real-time messages
   useEffect(() => {
-    if (!chatId || !loggedInUser) {
-      console.log("Missing required data, waiting...");
+    if (!isClient || !chatId || !loggedInUser) {
       return;
     }
 
@@ -212,7 +212,6 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
     }) => {
 
       if (data.type === 'file') {
-
         const fetchMessages = async () => {
           setLoading(true);
           try {
@@ -238,7 +237,6 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
               const sortedMessages = data.sort((a, b) =>
                 new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
               );
-    
     
               const decryptedMessages = await Promise.all(
                 sortedMessages.map(async (msg) => {
@@ -280,9 +278,7 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
                 })
               );
     
-    
               setMessages(decryptedMessages);
-              console.log("Fetched and loaded", decryptedMessages.length, "messages");
             }
             else {
               const response = await fetch(`http://127.0.0.1:8000/api/chat/get_group_messages?group=${chatId}`, {
@@ -333,7 +329,6 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
               });
     
               setMessages(formattedMessages);
-              console.log("Fetched and loaded", formattedMessages.length, "messages");
             }
           }
           catch (error) {
@@ -361,13 +356,17 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
       }
     });
 
-    window.pusherInstance = pusher;
+    if (typeof window !== 'undefined') {
+      window.pusherInstance = pusher;
+    }
 
     return () => {
       pusher.unsubscribe(loggedInUser);
-      window.pusherInstance = null;
+      if (typeof window !== 'undefined') {
+        window.pusherInstance = null;
+      }
     };
-  }, [chatId, loggedInUser, isGroup]);
+  }, [chatId, loggedInUser, isGroup, isClient]);
 
   const handleSendMessage = async (message: string) => {
     if (!loggedInUser || !chatId) {
@@ -402,7 +401,6 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
     ]);
   };
 
-
   const handleOpenUserInfo = async () => {
     try {
       const usersData = await fetchUsers();
@@ -415,8 +413,13 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
       console.error("Error fetching user info:", error);
     }
   };
+
+  if (!isClient) {
+    return <div>Loading chat...</div>;
+  }
+
   if (!loggedInUser) {
-    return <div>Loading...</div>;
+    return <div>Please log in to view this chat</div>;
   }
 
   return (
@@ -492,7 +495,6 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
               )}
             </div>
           ))
-
         )}
       </div>
       <MessageInput
@@ -527,5 +529,3 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
     </div>
   );
 }
-
-

@@ -5,6 +5,7 @@ import NewGroupModal from "./NewGroupModal";
 import GroupInfoModal from "./GroupInfoModal";
 import { fetchUsers, fetchGroups } from "@/lib/api";
 import { addGroupMembers } from "@/lib/api";
+
 interface User {
   id: string;
   name: string;
@@ -41,20 +42,29 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
   const [selectedGroupInfo, setSelectedGroupInfo] = useState<Chat | null>(null);
   const [loading, setLoading] = useState(true);
   const [loggedInUserName, setLoggedInUserName] = useState<string | null>(null);
-  const storedUsername = localStorage.getItem("username");
+  const [storedUsername, setStoredUsername] = useState<string | null>(null);
+
+  // Safely get localStorage items on client side only
   useEffect(() => {
-    // Fetch logged-in username from localStorage
-    const loggedInUser = localStorage.getItem("username");
-    if (loggedInUser) {
-      setLoggedInUserName(loggedInUser);
+    if (typeof window !== 'undefined') {
+      const username = localStorage.getItem("username");
+      setStoredUsername(username);
+      
+      // Fetch logged-in username from localStorage
+      const loggedInUser = localStorage.getItem("username");
+      if (loggedInUser) {
+        setLoggedInUserName(loggedInUser);
+      }
     }
   }, []);
 
   useEffect(() => {
+    // Only proceed with data loading if we have the username
+    if (!storedUsername) return;
+    
     const loadData = async () => {
       try {
         // Fetch users and groups in parallel
-        const loggedInUser = localStorage.getItem("username");
         const [usersData, groupsData] = await Promise.all([
           fetchUsers(),
           fetchGroups(storedUsername)
@@ -68,11 +78,10 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
         }));
 
         setUsers(formattedUsers);
-        if (storedUsername) {
-          const currentUser = formattedUsers.find((user: User) => user.username === storedUsername);
-          if (currentUser) {
-            setLoggedInUserName(currentUser.name);
-          }
+        
+        const currentUser = formattedUsers.find((user: User) => user.username === storedUsername);
+        if (currentUser) {
+          setLoggedInUserName(currentUser.name);
         }
 
         // Format groups
@@ -108,7 +117,7 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
     };
 
     loadData();
-  }, []);
+  }, [storedUsername]);
 
   const handleSearch = (query: string) => {
     if (!query) {
@@ -140,11 +149,10 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
 
   const handleSelect = (chatId: string, chatName: string, isGroup: boolean) => {
     setSelectedChat(chatId);
-    onSelectChat(chatId, chatName, isGroup);  // Pass as two separate arguments
+    onSelectChat(chatId, chatName, isGroup);
   };
 
   const handleViewGroupInfo = (chat: Chat) => {
-    // Handle the group info modal
     setSelectedGroupInfo(chat);
     setShowGroupInfoModal(true);
   };
@@ -213,7 +221,7 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
           >
             <div
               className="flex-1"
-              onClick={() => handleSelect(chat.id, chat.name, chat.isGroup)}  // Updated to handle select properly
+              onClick={() => handleSelect(chat.id, chat.name, chat.isGroup)}
             >
               <h2 className="font-semibold text-gray-900">{chat.name}</h2>
               <p className="text-sm text-gray-700">{chat.lastMessage}</p>
@@ -231,7 +239,7 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
                   className="text-xs bg-blue-500 text-white p-1 rounded"
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleViewGroupInfo(chat);  // Pass the chat info to view
+                    handleViewGroupInfo(chat);
                   }}
                 >
                   Info
@@ -252,13 +260,12 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
 
       {showGroupInfoModal && selectedGroupInfo && (
         <GroupInfoModal
-          group={selectedGroupInfo}  // Pass selected group details to modal
-          allUsers={users}  // Pass all users for member addition
+          group={selectedGroupInfo}
+          allUsers={users}
           onClose={() => setShowGroupInfoModal(false)}
-          onAddMembers={handleAddMembers}  // Handle adding members to group
+          onAddMembers={handleAddMembers}
         />
       )}
     </div>
   );
 }
-
