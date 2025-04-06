@@ -28,7 +28,7 @@ export default function OtpPage() {
 
     const result = await verifyOtp(email, data.otp);
 
-    if (result.token) {
+    if (!result.error) {
       localStorage.setItem("token", result.token);
       localStorage.removeItem("otpEmail");
       router.push("/");
