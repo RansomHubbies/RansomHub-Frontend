@@ -6,13 +6,68 @@ import Pusher from "pusher-js";
 import { Cookie } from "next/font/google";
 import { getCSRFTokenFromCookie } from "@/app/api";
 
+
+
+// interface Message {
+//   sender: string;
+//   recipient: string;
+//   message: string;
+//   timestamp: string;
+//   iv: string;
+//   isMe?: boolean;
+// }
+
+// interface DisplayMessage {
+//   sender: string;
+//   text: string;
+//   isMe: boolean;
+//   timestamp?: string;
+// }
+
+
+
+
+
+// // Update the Message interface to include file type
+// interface Message {
+//   sender: string;
+//   recipient: string;
+//   message: string;
+//   timestamp: string;
+//   iv: string;
+//   isMe?: boolean;
+//   type?: string;
+//   file?: string;
+//   filename?: string;
+//   file_type?: string;
+// }
+
+// // Update the DisplayMessage interface
+// interface DisplayMessage {
+//   sender: string;
+//   text: string;
+//   isMe: boolean;
+//   timestamp?: string;
+//   type?: string;
+//   file?: string;
+//   filename?: string;
+//   fileType?: string;
+// }
+
+
+
+// Update the interfaces at the top of the file
 interface Message {
   sender: string;
-  recipient: string;
+  recipient?: string;
+  group?: string;
   message: string;
   timestamp: string;
   iv: string;
-  isMe?: boolean;
+  type?: string;
+  file?: string;
+  filename?: string;
+  file_type?: string;
 }
 
 interface DisplayMessage {
@@ -20,7 +75,13 @@ interface DisplayMessage {
   text: string;
   isMe: boolean;
   timestamp?: string;
+  type?: string;
+  file?: string;
+  filename?: string;
+  fileType?: string;
+  group?: string;
 }
+
 
 declare global {
   interface Window {
@@ -29,9 +90,7 @@ declare global {
 }
 
 export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: string, chatName: string, isGroup: boolean }) {
-  // console.log("Chat ID:", chatId);
-  // console.log("Chat Name:", chatName);
-  // console.log("Is Group:", isGroup);
+
   const initialUser = localStorage.getItem("username") || null;
   const [loggedInUser, setLoggedInUser] = useState(initialUser);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
@@ -48,7 +107,7 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
     const fetchMessages = async () => {
       setLoading(true);
       try {
-        if (!isGroup){
+        if (!isGroup) {
           const response = await fetch(`http://127.0.0.1:8000/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`, {
             method: "GET",
             headers: {
@@ -58,21 +117,62 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
             },
             credentials: "include",
           });
-          
+
           if (!response.ok) {
             setMessages([]);
             throw new Error(`Error fetching messages: ${response.status}`);
           }
-          
+
           const data: Message[] = await response.json();
-          
+
           // Sort messages by timestamp (oldest first)
-          const sortedMessages = data.sort((a, b) => 
+          const sortedMessages = data.sort((a, b) =>
             new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
           );
 
+          // const decryptedMessages = await Promise.all(
+          //   sortedMessages.map(async (msg) => {
+          //     try {
+          //       const decryptedText = await decryptMessage(
+          //         loggedInUser,
+          //         chatId,
+          //         msg.message,
+          //         msg.iv,
+          //       );
+          //       return {
+          //         sender: msg.sender,
+          //         text: decryptedText,
+          //         isMe: msg.sender === loggedInUser,
+          //         timestamp: msg.timestamp,
+          //       };
+          //     } catch (error) {
+          //       console.error("Error decrypting message:", error);
+          //       return {
+          //         sender: msg.sender,
+          //         text: "[Failed to decrypt]",
+          //         isMe: msg.sender === loggedInUser,
+          //         timestamp: msg.timestamp,
+          //       };
+          //     }
+          //   })
+          // );
+
+
           const decryptedMessages = await Promise.all(
             sortedMessages.map(async (msg) => {
+              if (msg.type === 'file') {
+                return {
+                  sender: msg.sender,
+                  text: `File: ${msg.filename}`,
+                  isMe: msg.sender === loggedInUser,
+                  timestamp: msg.timestamp,
+                  type: 'file',
+                  file: msg.file,
+                  filename: msg.filename,
+                  fileType: msg.file_type
+                };
+              }
+
               try {
                 const decryptedText = await decryptMessage(
                   loggedInUser,
@@ -97,7 +197,8 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
               }
             })
           );
-          
+
+
           setMessages(decryptedMessages);
           console.log("Fetched and loaded", decryptedMessages.length, "messages");
         }
@@ -110,28 +211,50 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
               "Content-Type": "application/json",
             },
             credentials: "include",
-         });
-          
+          });
+
           if (!response.ok) {
             setMessages([]);
             throw new Error(`Error fetching messages: ${response.status}`);
           }
-          
+
           const data: Message[] = await response.json();
-          
+
           // Sort messages by timestamp (oldest first)
-          const sortedMessages = data.sort((a, b) => 
+          const sortedMessages = data.sort((a, b) =>
             new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
           );
-          
+
           // Convert to display format and determine if message is from logged-in user
-          const formattedMessages: DisplayMessage[] = sortedMessages.map(msg => ({
-            sender: msg.sender,
-            text: msg.message,
-            isMe: msg.sender === loggedInUser,
-            timestamp: msg.timestamp
-          }));
-          
+          const formattedMessages: DisplayMessage[] = sortedMessages.map((msg) => {
+            if (msg.type === 'file') {
+              return {
+                sender: msg.sender,
+                text: `File: ${msg.filename}`,
+                isMe: msg.sender === loggedInUser,
+                timestamp: msg.timestamp,
+                type: 'file',
+                file: msg.file,
+                filename: msg.filename,
+                fileType: msg.file_type,
+                group: msg.group
+              };
+            }
+            else {
+              return {
+                sender: msg.sender,
+                text: msg.message,
+                isMe: msg.sender === loggedInUser,
+                timestamp: msg.timestamp
+              };
+            }
+
+            // sender: msg.sender,
+            // text: msg.message,
+            // isMe: msg.sender === loggedInUser,
+            // timestamp: msg.timestamp
+          });
+
           setMessages(formattedMessages);
           console.log("Fetched and loaded", formattedMessages.length, "messages");
         }
@@ -144,7 +267,7 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
     };
 
     fetchMessages();
-  }, [chatId, loggedInUser]);
+  }, [chatId, loggedInUser, isGroup]);
 
   // Set up Pusher for real-time messages
   useEffect(() => {
@@ -159,28 +282,64 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
 
     const channel = pusher.subscribe(loggedInUser);
 
-    channel.bind(chatId, async(data: { message: string, sender: string, iv: string }) => {
-      var decryptedMessage = data.message;
-      if (!isGroup) {
-        decryptedMessage = await decryptMessage(loggedInUser, data.sender, data.message, data.iv)
+    // channel.bind(chatId, async (data: { message: string, sender: string, iv: string }) => {
+    //   var decryptedMessage = data.message;
+    //   if (!isGroup) {
+    //     decryptedMessage = await decryptMessage(loggedInUser, data.sender, data.message, data.iv)
+    //   }
+    //   setMessages(prevMessages => [
+    //     ...prevMessages,
+    //     {
+    //       sender: data.sender || chatId, // Use the sender from data if available
+    //       text: decryptedMessage,
+    //       isMe: false
+    //     },
+    //   ]);
+    // });
+
+    channel.bind(chatId, async (data: {
+      message: string,
+      sender: string,
+      iv: string,
+      type?: string,
+      file?: string,
+      filename?: string,
+      file_type?: string
+    }) => {
+      if (data.type === 'file') {
+        setMessages(prevMessages => [
+          ...prevMessages,
+          {
+            sender: data.sender,
+            text: `File: ${data.filename}`,
+            isMe: data.sender === loggedInUser,
+            type: 'file',
+            file: data.file,
+            filename: data.filename,
+            fileType: data.file_type,
+            timestamp: new Date().toISOString()
+          }
+        ]);
+      } else {
+        const decryptedMessage = await decryptMessage(loggedInUser, data.sender, data.message, data.iv);
+        setMessages(prevMessages => [
+          ...prevMessages,
+          {
+            sender: data.sender || chatId,
+            text: decryptedMessage,
+            isMe: false
+          },
+        ]);
       }
-      setMessages(prevMessages => [
-        ...prevMessages,
-        { 
-          sender: data.sender || chatId, // Use the sender from data if available
-          text: decryptedMessage, 
-          isMe: false 
-        },
-      ]);
     });
-    
+
     window.pusherInstance = pusher;
 
     return () => {
       pusher.unsubscribe(loggedInUser);
       window.pusherInstance = null;
     };
-  }, [chatId, loggedInUser]);
+  }, [chatId, loggedInUser, isGroup]);
 
   const handleSendMessage = async (message: string) => {
     if (!loggedInUser || !chatId) {
@@ -195,10 +354,10 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
 
     // Call sendMessage API with correct sender value
     try {
-      if (isGroup){
+      if (isGroup) {
         await sendGroupMessage(loggedInUser, chatId, message);  // Send group message
       }
-      else{
+      else {
         await sendMessage(loggedInUser, chatId, message);
       }
     } catch (error) {
@@ -206,18 +365,28 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
       // Optionally handle the error in UI
     }
   };
+
+  // In the component, update the handleFileMessage function and add onFileSend handler
+  const handleFileMessage = (fileMessage: DisplayMessage) => {
+    setMessages(prevMessages => [
+      ...prevMessages,
+      fileMessage
+    ]);
+  };
+
+
   const handleOpenUserInfo = async () => {
-      try {
-        const usersData = await fetchUsers();
-        const user = usersData.find((u: any) => u.username === chatId);
-        if (user) {
-          setSelectedUserDetails(user);
-          setShowUserInfo(true);
-        }
-      } catch (error) {
-        console.error("Error fetching user info:", error);
+    try {
+      const usersData = await fetchUsers();
+      const user = usersData.find((u: any) => u.username === chatId);
+      if (user) {
+        setSelectedUserDetails(user);
+        setShowUserInfo(true);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching user info:", error);
+    }
+  };
   if (!loggedInUser) {
     return <div>Loading...</div>;
   }
@@ -244,29 +413,49 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
           messages.map((msg, index) => (
             <div key={index} className={`mb-4 ${msg.isMe ? "text-right" : "text-left"}`}>
               <div className={`inline-block rounded-lg overflow-hidden max-w-md ${msg.isMe ? "bg-blue-800" : "bg-gray-600"}`}>
-                {/* Show sender name for group chats when it's not the current user */}
-                {isGroup && !msg.isMe && (
-                  <div className="px-3 py-1 text-xs font-medium text-blue bg-opacity-100 border-b" 
-                       style={{ 
-                         backgroundColor: msg.isMe ? "rgba(37, 99, 235, 0.9)" : "rgba(75, 85, 99, 0.9)",
-                         borderBottomColor: msg.isMe ? "#1d4ed8" : "#4b5563"
-                       }}>
+                {/* Sender info for group chats */}
+                {(isGroup || msg.type === 'file') && !msg.isMe && (
+                  <div className="px-3 py-1 text-xs font-medium text-blue bg-opacity-100 border-b"
+                    style={{
+                      backgroundColor: msg.isMe ? "rgba(37, 99, 235, 0.9)" : "rgba(75, 85, 99, 0.9)",
+                      borderBottomColor: msg.isMe ? "#1d4ed8" : "#4b5563"
+                    }}>
                     {msg.sender}
                   </div>
                 )}
-                {/* Show sender name for group chats when it is the current user (optional but more consistent) */}
                 {isGroup && msg.isMe && (
-                  <div className="px-3 py-1 text-xs font-medium text-blue bg-opacity-100 border-b" 
-                       style={{ 
-                         backgroundColor: "rgba(37, 99, 235, 0.9)",
-                         borderBottomColor: "#1d4ed8"
-                       }}>
+                  <div className="px-3 py-1 text-xs font-medium text-blue bg-opacity-100 border-b"
+                    style={{
+                      backgroundColor: "rgba(37, 99, 235, 0.9)",
+                      borderBottomColor: "#1d4ed8"
+                    }}>
                     You
                   </div>
                 )}
-                <p className={`p-3 ${msg.isMe ? "text-white" : ""}`}>
-                  {msg.text}
-                </p>
+
+                {/* Message content */}
+                <div className={`p-3 ${msg.isMe ? "text-white" : ""}`}>
+                  {msg.type === 'file' ? (
+                    <>
+                      <a
+                        href={`data:${msg.fileType};base64,${msg.file}`}
+                        download={msg.filename}
+                        className="underline"
+                      >
+                        Download {msg.filename}
+                      </a>
+                      {msg.fileType?.startsWith('image/') && (
+                        <img
+                          src={`data:${msg.fileType};base64,${msg.file}`}
+                          alt={msg.filename}
+                          className="mt-2 max-w-full max-h-64 rounded"
+                        />
+                      )}
+                    </>
+                  ) : (
+                    <p>{msg.text}</p>
+                  )}
+                </div>
               </div>
               {msg.timestamp && (
                 <span className="text-xs text-gray-500 block mt-1">
@@ -275,9 +464,16 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
               )}
             </div>
           ))
+
         )}
       </div>
-      <MessageInput chatName={chatId} loggedInUser={loggedInUser} onSend={handleSendMessage} />
+      <MessageInput
+        chatName={chatId}
+        loggedInUser={loggedInUser}
+        onSend={handleSendMessage}
+        onFileSend={handleFileMessage}
+        isGroup={isGroup}
+      />
       {showUserInfo && selectedUserDetails && (
         <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center">
           <div className="bg-white rounded-lg p-6 w-[300px] shadow-lg">

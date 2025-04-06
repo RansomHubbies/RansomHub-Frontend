@@ -1,5 +1,5 @@
 import { group } from "console";
-import {convertBase64toUint8Array, decryptWithAESGCM, encryptWithAESGCM, getCSRFTokenFromCookie, openKeyDatabase} from "../app/api"
+import { convertBase64toUint8Array, decryptWithAESGCM, encryptWithAESGCM, getCSRFTokenFromCookie, openKeyDatabase } from "../app/api"
 
 const API_URL = 'http://127.0.0.1:8000/api/'
 export const fetchUsers = async () => {
@@ -10,12 +10,12 @@ export const fetchUsers = async () => {
     const response = await fetch(`${API_URL}users/get_users`, {
       method: "GET",
       headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-          "X-CSRFToken": csrfToken,
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+        "X-CSRFToken": csrfToken,
       },
       credentials: "include"
-  });
+    });
     if (!response.ok) {
       console.log("error:", response.json())
       throw new Error('Failed to fetch users');
@@ -44,7 +44,7 @@ export const createGroup = async (groupName: string, members: string[]) => {
         members: members
       }),
       credentials: "include"
-      
+
     });
 
     if (!response.ok) {
@@ -59,7 +59,7 @@ export const createGroup = async (groupName: string, members: string[]) => {
 export const fetchGroups = async (username: string | null) => {
   try {
     // console.log("username:", username);
-    if (!username){
+    if (!username) {
       return []
     }
     const token = localStorage.getItem("access_token");
@@ -68,12 +68,12 @@ export const fetchGroups = async (username: string | null) => {
     const response = await fetch(`${API_URL}chat/get_groups?user=${username}`, {
       method: "GET",
       headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-          "X-CSRFToken": csrfToken,
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+        "X-CSRFToken": csrfToken,
       },
       credentials: "include"
-  });
+    });
     if (!response.ok) {
       throw new Error('Failed to fetch groups');
     }
@@ -84,7 +84,7 @@ export const fetchGroups = async (username: string | null) => {
   }
 };
 
-const get_peer_public_key = async(peer_username: string) => {
+const get_peer_public_key = async (peer_username: string) => {
   try {
     const token = localStorage.getItem("access_token");
     const csrfToken = getCSRFTokenFromCookie();
@@ -110,100 +110,100 @@ const get_peer_public_key = async(peer_username: string) => {
   }
 };
 
-const retrievePrivateKey = async(username:string) => {
+const retrievePrivateKey = async (username: string) => {
 
-    try {
-      const base64PrivateKey = sessionStorage.getItem(`${username}_private_key`)
-      const privateKeyRaw = convertBase64toUint8Array(base64PrivateKey);
+  try {
+    const base64PrivateKey = sessionStorage.getItem(`${username}_private_key`)
+    const privateKeyRaw = convertBase64toUint8Array(base64PrivateKey);
 
-      const privateKey = await crypto.subtle.importKey(
-        "pkcs8",
-        privateKeyRaw,
-        {
-          name: "ECDH",
-          namedCurve: "P-256",
-        },
-        true,
-        ["deriveBits"]
-      )
+    const privateKey = await crypto.subtle.importKey(
+      "pkcs8",
+      privateKeyRaw,
+      {
+        name: "ECDH",
+        namedCurve: "P-256",
+      },
+      true,
+      ["deriveBits"]
+    )
 
-      return privateKey;
-    } catch (error) {
-      console.log("Error in Retrieve Private Key: ", error, username);
-      throw error;
-    }
+    return privateKey;
+  } catch (error) {
+    console.log("Error in Retrieve Private Key: ", error, username);
+    throw error;
+  }
 }
 
 const ecdhKeyExchange = async (username: string, publicKeyBase64: string) => {
-    try {
-        // Retrieve the stored private key
-        const privateKey = await retrievePrivateKey(username);
+  try {
+    // Retrieve the stored private key
+    const privateKey = await retrievePrivateKey(username);
 
-        // Decode the base64-encoded public key
-        const publicKeyBinaryString = atob(publicKeyBase64);
-        const publicKeyBuffer = new Uint8Array(publicKeyBinaryString.length);
-        for (let i=0; i<publicKeyBinaryString.length; i++) {
-          publicKeyBuffer[i] = publicKeyBinaryString.charCodeAt(i);
-        }
-
-        // Import the public key
-        const publicKey = await crypto.subtle.importKey(
-            "spki",
-            publicKeyBuffer.buffer,
-            {
-                name: "ECDH",
-                namedCurve: "P-256",
-            },
-            true, 
-            []
-        );
-
-        // Perform ECDH key exchange
-        const sharedSecret = await crypto.subtle.deriveBits(
-            {
-                name: "ECDH",
-                public: publicKey
-            },
-            privateKey,
-            256
-        );
-
-        const derivedKey = await crypto.subtle.importKey(
-          "raw",
-          sharedSecret,
-          {
-            name: "AES-GCM",
-            length: 256,
-          },
-          true,
-          ["encrypt", "decrypt"]
-        );
-
-        // console.log("Derived Shared Secret:", btoa(String.fromCharCode(...new Uint8Array(sharedSecret))));
-        return derivedKey;
-    } catch (error) {
-        console.error("Error during ECDH key exchange:", error);
+    // Decode the base64-encoded public key
+    const publicKeyBinaryString = atob(publicKeyBase64);
+    const publicKeyBuffer = new Uint8Array(publicKeyBinaryString.length);
+    for (let i = 0; i < publicKeyBinaryString.length; i++) {
+      publicKeyBuffer[i] = publicKeyBinaryString.charCodeAt(i);
     }
+
+    // Import the public key
+    const publicKey = await crypto.subtle.importKey(
+      "spki",
+      publicKeyBuffer.buffer,
+      {
+        name: "ECDH",
+        namedCurve: "P-256",
+      },
+      true,
+      []
+    );
+
+    // Perform ECDH key exchange
+    const sharedSecret = await crypto.subtle.deriveBits(
+      {
+        name: "ECDH",
+        public: publicKey
+      },
+      privateKey,
+      256
+    );
+
+    const derivedKey = await crypto.subtle.importKey(
+      "raw",
+      sharedSecret,
+      {
+        name: "AES-GCM",
+        length: 256,
+      },
+      true,
+      ["encrypt", "decrypt"]
+    );
+
+    // console.log("Derived Shared Secret:", btoa(String.fromCharCode(...new Uint8Array(sharedSecret))));
+    return derivedKey;
+  } catch (error) {
+    console.error("Error during ECDH key exchange:", error);
+  }
 };
 
 const encryptMessage = async (sender: string, recipient: string, message: string) => {
-    const peer_public_key = await get_peer_public_key(recipient);
+  const peer_public_key = await get_peer_public_key(recipient);
 
-    const sharedSecret = await ecdhKeyExchange(sender, peer_public_key.public_key);
-    const iv = crypto.getRandomValues(new Uint8Array(16));
+  const sharedSecret = await ecdhKeyExchange(sender, peer_public_key.public_key);
+  const iv = crypto.getRandomValues(new Uint8Array(16));
 
-    const encoder = new TextEncoder();
-    const encodedMessage = encoder.encode(message);
+  const encoder = new TextEncoder();
+  const encodedMessage = encoder.encode(message);
 
-    const encryptedMessageRaw = await encryptWithAESGCM(sharedSecret, encodedMessage, iv);
+  const encryptedMessageRaw = await encryptWithAESGCM(sharedSecret, encodedMessage, iv);
 
-    const encryptedMessage = btoa(String.fromCharCode(...new Uint8Array(encryptedMessageRaw)));
-    const ivBase64 = btoa(String.fromCharCode(...new Uint8Array(iv)));
+  const encryptedMessage = btoa(String.fromCharCode(...new Uint8Array(encryptedMessageRaw)));
+  const ivBase64 = btoa(String.fromCharCode(...new Uint8Array(iv)));
 
-    return {encryptedMessage, ivBase64};
+  return { encryptedMessage, ivBase64 };
 };
 
-export const decryptMessage = async(username: string, sender: string, encryptedMessageBase64: string, ivBase64: string) => {
+export const decryptMessage = async (username: string, sender: string, encryptedMessageBase64: string, ivBase64: string) => {
   try {
     const peer_public_key = await get_peer_public_key(sender);
     const sharedSecret = await ecdhKeyExchange(username, peer_public_key.public_key);
@@ -217,15 +217,15 @@ export const decryptMessage = async(username: string, sender: string, encryptedM
     return decodedMessage;
   } catch (error) {
     console.log("Error in decrypt message: ", error);
-    throw(error);
+    throw (error);
   }
 };
 
 
 export const sendMessage = async (sender: string, recipient: string, message: string) => {
   try {
-  
-    const {encryptedMessage, ivBase64} = await encryptMessage(sender, recipient, message);
+
+    const { encryptedMessage, ivBase64 } = await encryptMessage(sender, recipient, message);
 
     const token = localStorage.getItem("access_token");
     const csrfToken = getCSRFTokenFromCookie();
@@ -385,3 +385,149 @@ export const addGroupMembers = async (groupUsername: string, memberUsernames: st
   }
 };
 
+
+// Add these functions to your api.ts file
+
+// export const sendFile = async (sender: string, recipient: string, file: string, fileName: string, fileType: string) => {
+//   try {
+//     const { encryptedMessage, ivBase64 } = await encryptMessage(sender, recipient, "FILE_SENT_TO_CHAT");
+
+//     const token = localStorage.getItem("access_token");
+//     const csrfToken = getCSRFTokenFromCookie();
+//     const response = await fetch(`${API_URL}chat/send_file`, {
+//       method: "POST",
+//       headers: {
+//         "Content-Type": "application/json",
+//         "Authorization": `Bearer ${token}`,
+//         "X-CSRFToken": csrfToken,
+//       },
+//       credentials: "include",
+//       body: JSON.stringify({
+//         sender: sender,
+//         recipient: recipient,
+//         file: file,
+//         file_name: fileName,
+//         file_type: fileType,
+//         iv: ivBase64,
+//       }),
+//     });
+
+//     if (!response.ok) {
+//       const errorDetails = await response.json();
+//       console.error("API error:", errorDetails);
+//       throw new Error("Failed to send file");
+//     }
+//     return await response.json();
+//   } catch (error) {
+//     console.error("Error sending file:", error);
+//     throw error;
+//   }
+// };
+
+// export const sendGroupFile = async (sender: string, group: string, file: string, fileName: string, fileType: string) => {
+//   try {
+//     const { encryptedMessagesBase64, ivBase64 } = await encryptGroupMessage(sender, group, "FILE_SENT_TO_CHAT");
+
+//     const token = localStorage.getItem("access_token");
+//     const csrfToken = getCSRFTokenFromCookie();
+//     const response = await fetch(`${API_URL}chat/send_group_file`, {
+//       method: "POST",
+//       headers: {
+//         "Content-Type": "application/json",
+//         "Authorization": `Bearer ${token}`,
+//         "X-CSRFToken": csrfToken,
+//       },
+//       credentials: "include",
+//       body: JSON.stringify({
+//         sender: sender,
+//         group: group,
+//         file: file,
+//         file_name: fileName,
+//         file_type: fileType,
+//         iv: ivBase64,
+//       }),
+//     });
+
+//     if (!response.ok) {
+//       const errorDetails = await response.json();
+//       console.error("API error:", errorDetails);
+//       throw new Error("Failed to send file");
+//     }
+//     return await response.json();
+//   } catch (error) {
+//     console.error("Error sending file:", error);
+//     throw error;
+//   }
+// };
+
+
+
+
+
+export const sendFile = async (sender: string, recipient: string, file: string, fileName: string, fileType: string) => {
+  try {
+    const token = localStorage.getItem("access_token");
+    const csrfToken = getCSRFTokenFromCookie();
+    const response = await fetch(`${API_URL}chat/send_file`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+        "X-CSRFToken": csrfToken,
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        sender: sender,
+        recipient: recipient,
+        file: file,
+        file_name: fileName,
+        file_type: fileType,
+        iv: "", // You might want to add encryption for files too
+      }),
+    });
+
+    if (!response.ok) {
+      const errorDetails = await response.json();
+      console.error("API error:", errorDetails);
+      throw new Error("Failed to send file");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Error sending file:", error);
+    throw error;
+  }
+};
+
+export const sendGroupFile = async (sender: string, group: string, file: string, fileName: string, fileType: string) => {
+  try {
+    const token = localStorage.getItem("access_token");
+    const csrfToken = getCSRFTokenFromCookie();
+    const response = await fetch(`${API_URL}chat/send_group_file`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+        "X-CSRFToken": csrfToken,
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        sender: sender,
+        group: group,
+        file: file,
+        file_name: fileName,
+        file_type: fileType,
+        iv: "", // You might want to add encryption for files too
+      }),
+    });
+
+    if (!response.ok) {
+      const errorDetails = await response.json();
+      console.error("API error:", errorDetails);
+      throw new Error("Failed to send file");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Error sending file:", error);
+    throw error;
+  }
+};
