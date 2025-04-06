@@ -1,31 +1,219 @@
-// const API_URL = "http://127.0.0.1:8000/api";
-const API_URL = "https://192.168.2.233/api";
+const API_URL = "http://127.0.0.1:8000/api";
+// const API_URL = "https://192.168.2.233/api";
+import Cookies from 'js-cookie'
 
+export const getCsrfToken = async () => {
+    try {
+        const response = await fetch(`${API_URL}/users/csrf_cookie/`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json',
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to get CSRF token');
+        }
+        
+        const data = await response.json();
+        const csrfToken = response.headers.get('X-CSRFToken') || Cookies.get('csrftoken');
+        
+        if (!csrfToken) {
+            console.warn('CSRF token not found in response or cookies');
+        }
+        
+        return { data, csrfToken };
+    } catch (error) {
+        console.error('Error fetching CSRF token:', error);
+        return { error: 'Failed to get CSRF token' };
+    }
+};
 
 export const getCSRFTokenFromCookie = () => {
-    const cookie = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("csrftoken="));
-
-    if (cookie) {
-        return cookie.split("=")[1];
-    }
+    const csrftoken = Cookies.get('csrftoken');
+    
+    if (csrftoken) return csrftoken;
+    
     console.error("CSRF token not found in cookies.");
-    return ""; 
+    return "";
 };
+
+
+const generateECDHKeyPair = async () => {
+    try {
+        const keyPair = await window.crypto.subtle.generateKey(
+            {
+                name: "ECDH",
+                namedCurve: "P-256",
+            },
+            true,
+            ["deriveKey", "deriveBits"]
+        );
+
+        const publicKeyRaw = await window.crypto.subtle.exportKey("spki", keyPair.publicKey);
+        const publicKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(publicKeyRaw)));
+
+        return {
+            keyPair,
+            publicKeyBase64,
+        };
+    } catch (error) {
+        console.error("Error generating ECDH key pair:", error);
+        throw error;
+    }
+};
+
+export const openKeyDatabase = () => {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open("RansomHubSecureKeys", 1);
+      
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains("keys")) {
+          db.createObjectStore("keys", { keyPath: "username" });
+        }
+      };
+      
+      request.onsuccess = (event) => resolve(event.target.result);
+      request.onerror = (event) => reject("IndexedDB error: " + event.target.errorCode);
+    });
+  };
+
+export const convertBase64toUint8Array = (b64String) => {
+    const binaryString = atob(b64String);
+    const buffer = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+        buffer[i] = binaryString.charCodeAt(i);
+    }
+
+    return buffer;
+}
+
+const deriveKey = async(password, salt) => {
+    const encoder = new TextEncoder();
+    const passwordBuffer = encoder.encode(password);
+
+    const keyMaterial = await crypto.subtle.importKey(
+        "raw", 
+        passwordBuffer, 
+        { name: "PBKDF2" }, 
+        false, 
+        ["deriveBits", "deriveKey"]
+    );
+
+    const derivedKey = await crypto.subtle.deriveKey(
+        {
+            name: "PBKDF2",
+            salt: salt,
+            iterations: 100000,
+            hash: "SHA-256"
+        },
+        keyMaterial,
+        { name: "AES-GCM", length: 256 },
+        true,
+        ["encrypt", "decrypt"]
+    );
+
+    return derivedKey;
+
+};
+
+export const encryptWithAESGCM = async (key, data, iv) => {
+    const encryptedData = await crypto.subtle.encrypt(
+        {
+            name: "AES-GCM",
+            iv: iv
+        },
+        key,
+        data
+    );
+
+    return encryptedData;
+};
+
+export const decryptWithAESGCM = async (key, data, iv) => {
+    const decryptedData = await crypto.subtle.decrypt(
+        {
+            name: "AES-GCM",
+            iv: iv
+        },
+        key,
+        data
+    );
+
+    return decryptedData;
+}
+
+
+const encryptPrivateKey = async (privateKey, password, salt) => {
+
+    try{
+        const password_derived_key = await deriveKey(password, salt);
+
+        const privateKeyRaw = await window.crypto.subtle.exportKey("pkcs8", privateKey);
+        const encryptedPrivateKey = await encryptWithAESGCM(password_derived_key, privateKeyRaw, salt);
+
+        const encryptedPrivateKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(encryptedPrivateKey)));
+        const saltBase64 = btoa(String.fromCharCode(...new Uint8Array(salt)));
+        
+        return {
+            encryptedPrivateKeyBase64,
+            saltBase64
+        }
+    } catch (error) {
+        console.log("Error in encrypting Private Key:", error);
+        throw error;
+    }
+};
+
+const decryptPrivateKey = async (encryptedPrivateKeyBase64, password, saltBase64) => {
+
+    try {
+        const salt = convertBase64toUint8Array(saltBase64);
+        const derivedKey = await deriveKey(password, salt)
+        const encryptedPrivateKeyBuffer = convertBase64toUint8Array(encryptedPrivateKeyBase64);
+
+        const decryptedPrivateKey = await decryptWithAESGCM(derivedKey, encryptedPrivateKeyBuffer, salt);
+        const privateKeyRaw = decryptedPrivateKey;
+
+        return privateKeyRaw;
+    } catch (error) {
+        console.log("Error in decrypting Private Key:", error);
+        throw error;
+    }
+
+};
+
+
 export const signup = async (name,username, email, password,phone) => {
     try {
+
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+        const { keyPair, publicKeyBase64 } = await generateECDHKeyPair();
+        const { encryptedPrivateKeyBase64, saltBase64 } = await encryptPrivateKey(keyPair.privateKey, password, salt);
+
         const csrfToken = getCSRFTokenFromCookie();
         const response = await fetch(`${API_URL}/users/signup/`, {
             method: "POST",
             headers: { "Content-Type": "application/json","X-CSRFToken": csrfToken, },
             credentials: "include",
-            body: JSON.stringify({ name,username, email, password, phone }),
+            body: JSON.stringify({ 
+                name,
+                username, 
+                email, 
+                password, 
+                phone, 
+                public_key: publicKeyBase64,
+                encrypted_private_key: encryptedPrivateKeyBase64,
+                private_key_salt: saltBase64,
+             }),
         });
         
         const data = await response.json();
 
         if (response.status === 201) {
+            // await storePrivateKey(username, keyPair.privateKey)
             return data;  // 
         } else {
             throw new Error(data.error || "Signup failed");
@@ -82,12 +270,10 @@ export const resendOtp = async (email) => {
         } else {
             throw new Error(data.error || "Failed to resend OTP");
         }
-    } catch (error) {
-        return { error: error.message || "Something went wrong" };
+    } catch (error) {const privateKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(privateKeyRaw)));
+
     }
 };
-
-
 
 
 export const login = async (email, password) => {
@@ -103,6 +289,11 @@ export const login = async (email, password) => {
         const data = await response.json();
 
         if (response.status === 200) {
+            
+            const privateKeyRaw = await decryptPrivateKey(data.encrypted_private_key, password, data.private_key_salt);
+            console.log("Private Key Raw: ", privateKeyRaw);
+            const privateKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(privateKeyRaw)));
+            sessionStorage.setItem(`${data.username}_private_key`, privateKeyBase64);
             localStorage.setItem("access_token", data.access_token);
             localStorage.setItem("refresh_token", data.refresh_token);
             return data;
@@ -130,6 +321,7 @@ export const logout = async () => {
 
         const data = await response.json();
         if (response.status === 200) {
+            sessionStorage.clear();
             localStorage.removeItem("access_token"); 
             localStorage.removeItem("refresh_token");
             return data;

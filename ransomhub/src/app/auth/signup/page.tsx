@@ -134,7 +134,7 @@ export default function SignupPage() {
           <div className="mt-4">
             <ReCAPTCHA
               sitekey="6LeyqwMrAAAAAA6w1vcznR_GClUqOqBSbnwKjRvh" // Replace with your reCAPTCHA site key
-              onChange={(value) => setCaptchaValue(value)} // Set the captcha value on change
+              onChange={(value: string | null) => setCaptchaValue(value)} // Set the captcha value on change
             />
           </div>
           <button

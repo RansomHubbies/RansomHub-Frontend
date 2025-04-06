@@ -1,9 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
 import { useRouter } from "next/navigation"; 
-import { login,verifyRecaptcha } from "../../api"; 
+import { login,verifyRecaptcha,getCsrfToken } from "../../api"; 
 import ReCAPTCHA from "react-google-recaptcha";
 
 export default function LoginPage() {
@@ -13,6 +13,24 @@ export default function LoginPage() {
   const [captchaValue, setCaptchaValue] = useState<string | null>(null); // State to hold captcha value
 
   const router = useRouter(); 
+
+  useEffect(() => {
+    const fetchCsrfToken = async () => {
+      // Check if token already exists
+      const hasCsrfToken = document.cookie.includes('csrf'); // Adjust name as needed
+      
+      if (!hasCsrfToken) {
+        try {
+          await getCsrfToken();
+          console.log("CSRF token cookie set");
+        } catch (error) {
+          console.error("Error setting CSRF token:", error);
+        }
+      }
+    };
+    
+    fetchCsrfToken();
+  }, []);
 
   const onSubmit = async (data: any) => {
     setLoading(true);
@@ -33,7 +51,7 @@ export default function LoginPage() {
           // Save the access token (and optionally refresh token) in localStorage
           localStorage.setItem("access_token", loginResult.access_token); // Store access token
           localStorage.setItem("refresh_token", loginResult.refresh_token || ""); // Store refresh token (optional)
-  
+          localStorage.setItem("username", loginResult.username);
           // Redirect to a protected page (home/dashboard)
           router.push("/");
         } else {
@@ -99,7 +117,7 @@ export default function LoginPage() {
           <div className="mt-4">
             <ReCAPTCHA
               sitekey="6LeyqwMrAAAAAA6w1vcznR_GClUqOqBSbnwKjRvh" // Replace with your reCAPTCHA site key
-              onChange={(value) => setCaptchaValue(value)} // Set the captcha value on change
+              onChange={(value: string | null) => setCaptchaValue(value)} // Set the captcha value on change
             />
           </div>
           <button
