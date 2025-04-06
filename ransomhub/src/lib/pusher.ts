@@ -16,6 +16,6 @@ export const subscribeToChannel = (channelName: string, callback: (data: any) =>
   };
 };
 
-export const triggerEvent = (channelName: string, eventName: string, data: any) => {
-  pusherClient.trigger(channelName, eventName, data);
-};
+// export const triggerEvent = (channelName: string, eventName: string, data: any) => {
+//   pusherClient.trigger(channelName, eventName, data);
+// };
