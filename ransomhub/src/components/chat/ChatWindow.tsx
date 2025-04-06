@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import MessageInput from "./MessageInput";
 import { sendMessage, sendGroupMessage, decryptMessage } from "../../lib/api";
 import Pusher from "pusher-js";
+import { Cookie } from "next/font/google";
+import { getCSRFTokenFromCookie } from "@/app/api";
 
 interface Message {
   sender: string;
@@ -46,7 +48,15 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
       setLoading(true);
       try {
         if (!isGroup){
-          const response = await fetch(`http://127.0.0.1:8000/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`);
+          const response = await fetch(`http://127.0.0.1:8000/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`, {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+              "X-CSRFToken": getCSRFTokenFromCookie(),
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+          });
           
           if (!response.ok) {
             throw new Error(`Error fetching messages: ${response.status}`);
@@ -90,7 +100,15 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
           console.log("Fetched and loaded", decryptedMessages.length, "messages");
         }
         else {
-          const response = await fetch(`http://127.0.0.1:8000/api/chat/get_group_messages?group=${chatId}`);
+          const response = await fetch(`http://127.0.0.1:8000/api/chat/get_group_messages?group=${chatId}`, {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+              "X-CSRFToken": getCSRFTokenFromCookie(),
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+         });
           
           if (!response.ok) {
             throw new Error(`Error fetching messages: ${response.status}`);
