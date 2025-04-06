@@ -7,55 +7,6 @@ import { Cookie } from "next/font/google";
 import { getCSRFTokenFromCookie } from "@/app/api";
 
 
-
-// interface Message {
-//   sender: string;
-//   recipient: string;
-//   message: string;
-//   timestamp: string;
-//   iv: string;
-//   isMe?: boolean;
-// }
-
-// interface DisplayMessage {
-//   sender: string;
-//   text: string;
-//   isMe: boolean;
-//   timestamp?: string;
-// }
-
-
-
-
-
-// // Update the Message interface to include file type
-// interface Message {
-//   sender: string;
-//   recipient: string;
-//   message: string;
-//   timestamp: string;
-//   iv: string;
-//   isMe?: boolean;
-//   type?: string;
-//   file?: string;
-//   filename?: string;
-//   file_type?: string;
-// }
-
-// // Update the DisplayMessage interface
-// interface DisplayMessage {
-//   sender: string;
-//   text: string;
-//   isMe: boolean;
-//   timestamp?: string;
-//   type?: string;
-//   file?: string;
-//   filename?: string;
-//   fileType?: string;
-// }
-
-
-
 // Update the interfaces at the top of the file
 interface Message {
   sender: string;
@@ -129,33 +80,6 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
           const sortedMessages = data.sort((a, b) =>
             new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
           );
-
-          // const decryptedMessages = await Promise.all(
-          //   sortedMessages.map(async (msg) => {
-          //     try {
-          //       const decryptedText = await decryptMessage(
-          //         loggedInUser,
-          //         chatId,
-          //         msg.message,
-          //         msg.iv,
-          //       );
-          //       return {
-          //         sender: msg.sender,
-          //         text: decryptedText,
-          //         isMe: msg.sender === loggedInUser,
-          //         timestamp: msg.timestamp,
-          //       };
-          //     } catch (error) {
-          //       console.error("Error decrypting message:", error);
-          //       return {
-          //         sender: msg.sender,
-          //         text: "[Failed to decrypt]",
-          //         isMe: msg.sender === loggedInUser,
-          //         timestamp: msg.timestamp,
-          //       };
-          //     }
-          //   })
-          // );
 
 
           const decryptedMessages = await Promise.all(
@@ -248,11 +172,6 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
                 timestamp: msg.timestamp
               };
             }
-
-            // sender: msg.sender,
-            // text: msg.message,
-            // isMe: msg.sender === loggedInUser,
-            // timestamp: msg.timestamp
           });
 
           setMessages(formattedMessages);
@@ -282,21 +201,6 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
 
     const channel = pusher.subscribe(loggedInUser);
 
-    // channel.bind(chatId, async (data: { message: string, sender: string, iv: string }) => {
-    //   var decryptedMessage = data.message;
-    //   if (!isGroup) {
-    //     decryptedMessage = await decryptMessage(loggedInUser, data.sender, data.message, data.iv)
-    //   }
-    //   setMessages(prevMessages => [
-    //     ...prevMessages,
-    //     {
-    //       sender: data.sender || chatId, // Use the sender from data if available
-    //       text: decryptedMessage,
-    //       isMe: false
-    //     },
-    //   ]);
-    // });
-
     channel.bind(chatId, async (data: {
       message: string,
       sender: string,
@@ -306,6 +210,7 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
       filename?: string,
       file_type?: string
     }) => {
+
       if (data.type === 'file') {
         setMessages(prevMessages => [
           ...prevMessages,
@@ -321,7 +226,11 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
           }
         ]);
       } else {
-        const decryptedMessage = await decryptMessage(loggedInUser, data.sender, data.message, data.iv);
+        var decryptedMessage = data.message;
+        if (!isGroup) {
+          decryptedMessage = await decryptMessage(loggedInUser, data.sender, data.message, data.iv);
+        }
+        // const decryptedMessage = await decryptMessage(loggedInUser, data.sender, data.message, data.iv);
         setMessages(prevMessages => [
           ...prevMessages,
           {
