@@ -59,6 +59,7 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
           });
           
           if (!response.ok) {
+            setMessages([]);
             throw new Error(`Error fetching messages: ${response.status}`);
           }
           
@@ -111,6 +112,7 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
          });
           
           if (!response.ok) {
+            setMessages([]);
             throw new Error(`Error fetching messages: ${response.status}`);
           }
           
