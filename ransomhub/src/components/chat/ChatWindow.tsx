@@ -64,7 +64,8 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
       setLoading(true);
       try {
         if (!isGroup) {
-          const response = await fetch(`http://127.0.0.1:8000/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`, {
+          // const response = await fetch(`http://127.0.0.1:8000/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`, {
+          const response = await fetch(`https://192.168.2.233/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`, {
             method: "GET",
             headers: {
               Authorization: `Bearer ${localStorage.getItem("access_token")}`,
@@ -129,7 +130,8 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
           setMessages(decryptedMessages);
         }
         else {
-          const response = await fetch(`http://127.0.0.1:8000/api/chat/get_group_messages?group=${chatId}`, {
+          // const response = await fetch(`http://127.0.0.1:8000/api/chat/get_group_messages?group=${chatId}`, {
+          const response = await fetch(`https://192.168.2.233/api/chat/get_group_messages?group=${chatId}`, {
             method: "GET",
             headers: {
               Authorization: `Bearer ${localStorage.getItem("access_token")}`,
@@ -216,7 +218,8 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
           setLoading(true);
           try {
             if (!isGroup) {
-              const response = await fetch(`http://127.0.0.1:8000/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`, {
+              // const response = await fetch(`http://127.0.0.1:8000/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`, {
+              const response = await fetch(`https://192.168.2.233/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`, {
                 method: "GET",
                 headers: {
                   Authorization: `Bearer ${localStorage.getItem("access_token")}`,
@@ -281,7 +284,8 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
               setMessages(decryptedMessages);
             }
             else {
-              const response = await fetch(`http://127.0.0.1:8000/api/chat/get_group_messages?group=${chatId}`, {
+              // const response = await fetch(`http://127.0.0.1:8000/api/chat/get_group_messages?group=${chatId}`, {
+              const response = await fetch(`https://192.168.2.233/api/chat/get_group_messages?group=${chatId}`, {
                 method: "GET",
                 headers: {
                   Authorization: `Bearer ${localStorage.getItem("access_token")}`,
