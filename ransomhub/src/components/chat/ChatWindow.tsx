@@ -71,8 +71,8 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
       setLoading(true);
       try {
         if (!isGroup) {
-          const response = await fetch(`http://127.0.0.1:8000/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`, {
-          // const response = await fetch(`https://192.168.2.233/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`, {
+          // const response = await fetch(`http://127.0.0.1:8000/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`, {
+          const response = await fetch(`https://192.168.2.233/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`, {
             method: "GET",
             headers: {
               Authorization: `Bearer ${localStorage.getItem("access_token")}`,
@@ -140,8 +140,8 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
           setMessages(decryptedMessages);
         }
         else {
-          const response = await fetch(`http://127.0.0.1:8000/api/chat/get_group_messages?group=${chatId}`, {
-          // const response = await fetch(`https://192.168.2.233/api/chat/get_group_messages?group=${chatId}`, {
+          // const response = await fetch(`http://127.0.0.1:8000/api/chat/get_group_messages?group=${chatId}`, {
+          const response = await fetch(`https://192.168.2.233/api/chat/get_group_messages?group=${chatId}`, {
             method: "GET",
             headers: {
               Authorization: `Bearer ${localStorage.getItem("access_token")}`,
@@ -228,8 +228,8 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
           setLoading(true);
           try {
             if (!isGroup) {
-              const response = await fetch(`http://127.0.0.1:8000/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`, {
-              // const response = await fetch(`https://192.168.2.233/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`, {
+              // const response = await fetch(`http://127.0.0.1:8000/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`, {
+              const response = await fetch(`https://192.168.2.233/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`, {
                 method: "GET",
                 headers: {
                   Authorization: `Bearer ${localStorage.getItem("access_token")}`,
@@ -294,8 +294,8 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
               setMessages(decryptedMessages);
             }
             else {
-              const response = await fetch(`http://127.0.0.1:8000/api/chat/get_group_messages?group=${chatId}`, {
-              // const response = await fetch(`https://192.168.2.233/api/chat/get_group_messages?group=${chatId}`, {
+              // const response = await fetch(`http://127.0.0.1:8000/api/chat/get_group_messages?group=${chatId}`, {
+              const response = await fetch(`https://192.168.2.233/api/chat/get_group_messages?group=${chatId}`, {
                 method: "GET",
                 headers: {
                   Authorization: `Bearer ${localStorage.getItem("access_token")}`,
@@ -434,7 +434,8 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
     
     try {
       console.log(chatId)
-      const response = await fetch(`http://127.0.0.1:8000/api/users/follow/`, {
+      // const response = await fetch(`http://127.0.0.1:8000/api/users/follow/`, {
+      const response = await fetch(`https://192.168.2.233/api/users/follow/`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("access_token")}`,
@@ -462,7 +463,8 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
     if (!loggedInUser || !chatId) return;
     
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/users/report/`, {
+      // const response = await fetch(`http://127.0.0.1:8000/api/users/report/`, {
+      const response = await fetch(`https://192.168.2.233/api/users/report/`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("access_token")}`,
@@ -494,9 +496,12 @@ const blockUserRequest = async () => {
   if (!loggedInUser || !chatId) return;
   
   try {
+    // const endpoint = isBlocked 
+    //   ? `http://127.0.0.1:8000/api/users/unblock/` 
+    //   : `http://127.0.0.1:8000/api/users/block/`;
     const endpoint = isBlocked 
-      ? `http://127.0.0.1:8000/api/users/unblock/` 
-      : `http://127.0.0.1:8000/api/users/block/`;
+      ? `https://192.168.2.233/api/users/unblock/` 
+      : `https://192.168.2.233/api/users/block/`;
       
     const response = await fetch(endpoint, {
       method: "POST",

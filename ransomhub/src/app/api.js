@@ -1,5 +1,5 @@
-const API_URL = "http://127.0.0.1:8000/api";
-// const API_URL = "https://192.168.2.233/api";
+// const API_URL = "http://127.0.0.1:8000/api";
+const API_URL = "https://192.168.2.233/api";
 import Cookies from 'js-cookie'
 
 export const getCsrfToken = async () => {
