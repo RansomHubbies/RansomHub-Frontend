@@ -4,6 +4,7 @@ import MessageInput from "./MessageInput";
 import { sendMessage, sendGroupMessage, decryptMessage, fetchUsers } from "../../lib/api";
 import Pusher from "pusher-js";
 import { getCSRFTokenFromCookie } from "@/app/api";
+import { useRouter } from "next/navigation";
 
 // Update the interfaces at the top of the file
 interface Message {
@@ -38,12 +39,18 @@ declare global {
 }
 
 export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: string, chatName: string, isGroup: boolean }) {
+  const router = useRouter();
   const [loggedInUser, setLoggedInUser] = useState<string | null>(null);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [showUserInfo, setShowUserInfo] = useState(false);
   const [selectedUserDetails, setSelectedUserDetails] = useState<any>(null);
   const [isClient, setIsClient] = useState(false);
+  
+  // Button states
+  const [followStatus, setFollowStatus] = useState("Follow");
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [isReported, setIsReported] = useState(false);
   
   // First check if we're on the client side
   useEffect(() => {
@@ -64,8 +71,8 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
       setLoading(true);
       try {
         if (!isGroup) {
-          // const response = await fetch(`http://127.0.0.1:8000/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`, {
-          const response = await fetch(`https://192.168.2.233/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`, {
+          const response = await fetch(`http://127.0.0.1:8000/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`, {
+          // const response = await fetch(`https://192.168.2.233/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`, {
             method: "GET",
             headers: {
               Authorization: `Bearer ${localStorage.getItem("access_token")}`,
@@ -80,8 +87,11 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
             throw new Error(`Error fetching messages: ${response.status}`);
           }
 
-          const data: Message[] = await response.json();
-
+          const { messages: message_list, relationship } = await response.json();
+          // console.log(relationship);
+          const data: Message[] = message_list;
+          setIsBlocked(relationship.is_blocked);
+          setFollowStatus(relationship.is_following ? "Following" : (relationship.follow_request_sent ? "Follow Request Sent" : "Follow"));
           // Sort messages by timestamp (oldest first)
           const sortedMessages = data.sort((a, b) =>
             new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
@@ -130,8 +140,8 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
           setMessages(decryptedMessages);
         }
         else {
-          // const response = await fetch(`http://127.0.0.1:8000/api/chat/get_group_messages?group=${chatId}`, {
-          const response = await fetch(`https://192.168.2.233/api/chat/get_group_messages?group=${chatId}`, {
+          const response = await fetch(`http://127.0.0.1:8000/api/chat/get_group_messages?group=${chatId}`, {
+          // const response = await fetch(`https://192.168.2.233/api/chat/get_group_messages?group=${chatId}`, {
             method: "GET",
             headers: {
               Authorization: `Bearer ${localStorage.getItem("access_token")}`,
@@ -218,8 +228,8 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
           setLoading(true);
           try {
             if (!isGroup) {
-              // const response = await fetch(`http://127.0.0.1:8000/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`, {
-              const response = await fetch(`https://192.168.2.233/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`, {
+              const response = await fetch(`http://127.0.0.1:8000/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`, {
+              // const response = await fetch(`https://192.168.2.233/api/chat/get_messages?sender=${loggedInUser}&recipient=${chatId}`, {
                 method: "GET",
                 headers: {
                   Authorization: `Bearer ${localStorage.getItem("access_token")}`,
@@ -284,8 +294,8 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
               setMessages(decryptedMessages);
             }
             else {
-              // const response = await fetch(`http://127.0.0.1:8000/api/chat/get_group_messages?group=${chatId}`, {
-              const response = await fetch(`https://192.168.2.233/api/chat/get_group_messages?group=${chatId}`, {
+              const response = await fetch(`http://127.0.0.1:8000/api/chat/get_group_messages?group=${chatId}`, {
+              // const response = await fetch(`https://192.168.2.233/api/chat/get_group_messages?group=${chatId}`, {
                 method: "GET",
                 headers: {
                   Authorization: `Bearer ${localStorage.getItem("access_token")}`,
@@ -418,6 +428,106 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
     }
   };
 
+  // New functions for follow, report, and block
+  const followUserRequest = async () => {
+    if (!loggedInUser || !chatId) return;
+    
+    try {
+      console.log(chatId)
+      const response = await fetch(`http://127.0.0.1:8000/api/users/follow/`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          "X-CSRFToken": getCSRFTokenFromCookie(),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: chatId,
+          current_user: loggedInUser
+        }),
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        setFollowStatus("Follow Request Sent");
+      } else {
+        console.error("Failed to send follow request");
+      }
+    } catch (error) {
+      console.error("Error sending follow request:", error);
+    }
+  };
+
+  const reportUserRequest = async () => {
+    if (!loggedInUser || !chatId) return;
+    
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/users/report/`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          "X-CSRFToken": getCSRFTokenFromCookie(),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: chatId,
+          current_user: loggedInUser,
+          reason: "Inappropriate behavior" 
+        }),
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        setIsReported(true);
+        // Navigate to chats page after successful report
+        router.push("/chats");
+      } else {
+        console.error("Failed to report user");
+      }
+    } catch (error) {
+      console.error("Error reporting user:", error);
+    }
+  };
+
+  // Updated blockUserRequest to toggle between block and unblock
+const blockUserRequest = async () => {
+  if (!loggedInUser || !chatId) return;
+  
+  try {
+    const endpoint = isBlocked 
+      ? `http://127.0.0.1:8000/api/users/unblock/` 
+      : `http://127.0.0.1:8000/api/users/block/`;
+      
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        "X-CSRFToken": getCSRFTokenFromCookie(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        username: chatId,
+        current_user: loggedInUser
+      }),
+      credentials: "include",
+    });
+
+    if (response.ok) {
+      setIsBlocked(prev => !prev);
+      // Only navigate away if we're blocking, not unblocking
+      if (!isBlocked) {
+        router.push("/chats");
+      }
+    } else {
+      // Handle error cases, especially cooldown
+      const errorData = await response.json();
+      alert(errorData.error || "Failed to update block status");
+    }
+  } catch (error) {
+    console.error("Error updating block status:", error);
+  }
+};
+
   if (!isClient) {
     return <div>Loading chat...</div>;
   }
@@ -430,14 +540,48 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
     <div className="flex flex-col h-full">
       <div className="p-4 border-b bg-white flex items-center justify-between">
         <h2 className="font-bold text-gray-900">{chatName}</h2>
-        {!isGroup && (
-          <button
-            className="text-blue-600 text-sm border border-blue-600 px-3 py-1 rounded hover:bg-blue-50"
-            onClick={handleOpenUserInfo}
-          >
-            Info
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {!isGroup && (
+            <>
+              <button
+              className={`text-white text-sm px-3 py-1 rounded ${
+                followStatus === "Following" 
+                  ? "bg-green-600 hover:bg-green-700" 
+                  : followStatus === "Follow Request Sent"
+                    ? "bg-gray-500 hover:bg-gray-600"
+                    : "bg-blue-600 hover:bg-blue-700"
+              }`}
+              onClick={followUserRequest}
+              disabled={followStatus!=="Follow"}
+            >
+              {followStatus === "Following" 
+                ? "Following" 
+                : followStatus === "Follow Request Sent"
+                  ? "Follow Request Sent"
+                  : "Follow"}
+            </button>
+              <button
+                className="text-white bg-yellow-600 text-sm px-3 py-1 rounded hover:bg-yellow-700"
+                onClick={reportUserRequest}
+                disabled={isReported}
+              >
+                Report
+              </button>
+              <button
+                className="text-white bg-red-600 text-sm px-3 py-1 rounded hover:bg-red-700"
+                onClick={blockUserRequest}
+              >
+                {isBlocked ? "Unblock" : "Block"}
+              </button>
+              <button
+                className="text-blue-600 text-sm border border-blue-600 px-3 py-1 rounded hover:bg-blue-50"
+                onClick={handleOpenUserInfo}
+              >
+                Info
+              </button>
+            </>
+          )}
+        </div>
       </div>
       <div className="flex-1 overflow-y-auto p-4 bg-gray-100">
         {loading ? (

@@ -10,6 +10,7 @@ interface User {
   id: string;
   name: string;
   username: string;
+  profileImage?: string; // Add profileImage field
 }
 
 interface Group {
@@ -25,6 +26,7 @@ interface Chat {
   unread: number;
   isGroup: boolean;
   members?: User[];
+  profileImage?: string; // Add profileImage field for chats
 }
 
 interface ChatSidebarProps {
@@ -43,6 +45,7 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
   const [loading, setLoading] = useState(true);
   const [loggedInUserName, setLoggedInUserName] = useState<string | null>(null);
   const [storedUsername, setStoredUsername] = useState<string | null>(null);
+  const [profileImage, setProfileImage] = useState<string | null>(null); // Add profileImage state
 
   // Safely get localStorage items on client side only
   useEffect(() => {
@@ -50,10 +53,18 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
       const username = localStorage.getItem("username");
       setStoredUsername(username);
       
-      // Fetch logged-in username from localStorage
+      // Fetch logged-in username and profile image from localStorage
       const loggedInUser = localStorage.getItem("username");
+      const userProfileImage = localStorage.getItem("profileImage");
+      
       if (loggedInUser) {
         setLoggedInUserName(loggedInUser);
+      }
+      
+      if (userProfileImage) {
+        setProfileImage(userProfileImage);
+      } else {
+        setProfileImage("/default-profile.png"); // Set default profile image
       }
     }
   }, []);
@@ -74,7 +85,8 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
         const formattedUsers = usersData.map((user: any) => ({
           id: user.username,
           name: user.name || user.username,
-          username: user.username
+          username: user.username,
+          profileImage: user.profileImage || "/default-profile.png" // Add profile image with default
         }));
 
         setUsers(formattedUsers);
@@ -82,6 +94,7 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
         const currentUser = formattedUsers.find((user: User) => user.username === storedUsername);
         if (currentUser) {
           setLoggedInUserName(currentUser.name);
+          setProfileImage(currentUser.profileImage); // Set current user's profile image
         }
 
         // Format groups
@@ -93,7 +106,8 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
           name: user.name,
           lastMessage: "Start a conversation",
           unread: 0,
-          isGroup: false
+          isGroup: false,
+          profileImage: user.profileImage // Add profile image to chats
         }));
 
         const groupChats = groupsData.map((group: Group) => ({
@@ -103,7 +117,8 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
           unread: 0,
           isGroup: true,
           members: formattedUsers.filter((user: User) =>
-            group.members.includes(user.username))
+            group.members.includes(user.username)),
+          profileImage: "/group-default.png" // Default group image
         }));
 
         const allChats = [...userChats, ...groupChats];
@@ -138,7 +153,8 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
       lastMessage: "Group created",
       unread: 0,
       isGroup: true,
-      members: selectedMembers
+      members: selectedMembers,
+      profileImage: "/group-default.png" // Default group image
     };
 
     const updatedChats = [...chats, newGroup];
@@ -191,12 +207,13 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
     <div className="w-1/4 bg-gray-200 border-r h-full overflow-y-auto flex flex-col">
       {loggedInUserName && (
         <div className="p-4 flex items-center border-b bg-white">
+          {/* Display profile image */}
           <img
-            src="/pro.jpeg"
+            src={profileImage || "/default-profile.png"}
             alt="Profile"
-            className="w-4 h-4 rounded-full mr-3"
+            className="w-10 h-10 rounded-full object-cover border-2 border-gray-300"
           />
-          <span className="text-gray-800 font-semibold">{loggedInUserName}</span>
+          <span className="text-gray-800 font-semibold ml-3">{loggedInUserName}</span>
         </div>
       )}
       
@@ -220,11 +237,19 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
             }`}
           >
             <div
-              className="flex-1"
+              className="flex-1 flex items-center"
               onClick={() => handleSelect(chat.id, chat.name, chat.isGroup)}
             >
-              <h2 className="font-semibold text-gray-900">{chat.name}</h2>
-              <p className="text-sm text-gray-700">{chat.lastMessage}</p>
+              {/* Chat avatar */}
+              <img 
+                src={chat.profileImage || (chat.isGroup ? "/group-default.png" : "/default-profile.png")}
+                alt={chat.name}
+                className="w-10 h-10 rounded-full object-cover mr-3"
+              />
+              <div>
+                <h2 className="font-semibold text-gray-900">{chat.name}</h2>
+                <p className="text-sm text-gray-700">{chat.lastMessage}</p>
+              </div>
             </div>
 
             <div className="flex items-center">
