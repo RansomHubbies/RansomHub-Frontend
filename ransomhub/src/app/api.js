@@ -1034,3 +1034,59 @@ export const verifyRecaptcha = async (captchaResponse) => {
         
     return normalized;
 };
+
+// Accept Follow Request
+export const acceptFollowRequest = async (username) => {
+    try {
+        const token = localStorage.getItem("access_token");
+        if (!token) return { error: "No access token found" };
+
+        const csrfToken = getCSRFTokenFromCookie();
+        const response = await fetch(`${API_URL}/users/accept_follow_request/`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`,
+                "X-CSRFToken": csrfToken,
+            },
+            credentials: "include",
+            body: JSON.stringify({ username }),
+        });
+
+        if (!response.ok) {
+            throw new Error("Failed to accept follow request");
+        }
+
+        return await response.json();
+    } catch (error) {
+        return { error: error.message || "Failed to accept follow request" };
+    }
+};
+
+// Reject Follow Request
+export const rejectFollowRequest = async (username) => {
+    try {
+        const token = localStorage.getItem("access_token");
+        if (!token) return { error: "No access token found" };
+
+        const csrfToken = getCSRFTokenFromCookie();
+        const response = await fetch(`${API_URL}/users/reject_follow_request/`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`,
+                "X-CSRFToken": csrfToken,
+            },
+            credentials: "include",
+            body: JSON.stringify({ username }),
+        });
+
+        if (!response.ok) {
+            throw new Error("Failed to reject follow request");
+        }
+
+        return await response.json();
+    } catch (error) {
+        return { error: error.message || "Failed to reject follow request" };
+    }
+};
