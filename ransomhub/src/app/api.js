@@ -766,6 +766,11 @@ export const fetchActivityLogs = async (filters = {}) => {
 };
 export const verifyIdentity = async (email, otp, newPassword) => {
     try {
+
+			const salt = crypto.getRandomValues(new Uint8Array(16));
+			const { keyPair, publicKeyBase64 } = await generateECDHKeyPair();
+			const { encryptedPrivateKeyBase64, saltBase64 } = await encryptPrivateKey(keyPair.privateKey, newPassword, salt);
+
       const url= `${API_URL}/users/identityverify/`;
       const response = await fetch(url, {
         method: "POST",
@@ -775,8 +780,13 @@ export const verifyIdentity = async (email, otp, newPassword) => {
           email,
           otp,
           new_password: newPassword,
+					public_key: publicKeyBase64,
+					encrypted_private_key: encryptedPrivateKeyBase64,
+					private_key_salt: saltBase64,
         }),
       });
+
+
   
       const result = await response.json();
   
