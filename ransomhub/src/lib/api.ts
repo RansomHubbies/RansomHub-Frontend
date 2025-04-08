@@ -389,7 +389,8 @@ export const addGroupMembers = async (groupUsername: string, memberUsernames: st
 export const sendFile = async (sender: string, recipient: string, file: string, fileName: string, fileType: string) => {
   try {
 
-    const {encryptedMessage, ivBase64} = await encryptMessage(sender, recipient, file);
+    // const {encryptedMessage, ivBase64} = await encryptMessage(sender, recipient, file);
+    const ivBase64 = crypto.getRandomValues(new Uint8Array(16));
 
     const token = localStorage.getItem("access_token");
     const csrfToken = getCSRFTokenFromCookie();
