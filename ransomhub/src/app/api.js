@@ -1099,3 +1099,89 @@ export const rejectFollowRequest = async (username) => {
         return { error: error.message || "Failed to reject follow request" };
     }
 };
+
+// Create a new post
+export const createPost = async (one_liner, image) => {
+    try {
+        const token = localStorage.getItem("access_token");
+        if (!token) return { error: "No access token found" };
+        
+        const csrfToken = getCSRFTokenFromCookie();
+        const formData = new FormData();
+        formData.append("one_liner", one_liner);
+        formData.append("image", image);
+        
+        const response = await fetch(`${API_URL}/users/create_post/`, {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "X-CSRFToken": csrfToken,
+            },
+            credentials: "include",
+            body: formData,
+        });
+        
+        if (!response.ok) {
+            throw new Error("Failed to create post");
+        }
+        
+        return await response.json();
+    } catch (error) {
+        return { error: error.message || "Failed to create post" };
+    }
+};
+
+// Get all posts
+export const getPosts = async () => {
+    try {
+        const token = localStorage.getItem("access_token");
+        if (!token) return { error: "No access token found" };
+        
+        const csrfToken = getCSRFTokenFromCookie();
+        const response = await fetch(`${API_URL}/users/get_posts/`, {
+            method: "GET",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrfToken,
+            },
+            credentials: "include",
+        });
+        
+        if (!response.ok) {
+            throw new Error("Failed to fetch posts");
+        }
+        
+        return await response.json();
+    } catch (error) {
+        return { error: error.message || "Failed to fetch posts" };
+    }
+};
+
+// Toggle like status on a post
+export const toggleLikePost = async (postId) => {
+    try {
+        const token = localStorage.getItem("access_token");
+        if (!token) return { error: "No access token found" };
+        
+        const csrfToken = getCSRFTokenFromCookie();
+        const response = await fetch(`${API_URL}/users/toggle_like/`, {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrfToken,
+            },
+            credentials: "include",
+            body: JSON.stringify({ post_id: postId }),
+        });
+        
+        if (!response.ok) {
+            throw new Error("Failed to update like status");
+        }
+        
+        return await response.json();
+    } catch (error) {
+        return { error: error.message || "Failed to toggle like" };
+    }
+};
