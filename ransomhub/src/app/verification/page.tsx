@@ -20,7 +20,7 @@ export default function VerificationPage() {
     if (file) {
       // Validate file type and size
       const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-      const maxSize = 5 * 1024 * 1024; // 5MB
+      const maxSize = 1024 * 1024; // 1MB
 
       if (!allowedTypes.includes(file.type)) {
         setError("Invalid file type. Please upload JPEG, PNG, or PDF.");
@@ -28,7 +28,7 @@ export default function VerificationPage() {
       }
 
       if (file.size > maxSize) {
-        setError("File is too large. Maximum size is 5MB.");
+        setError("File is too large. Maximum size is 1 MB.");
         return;
       }
 

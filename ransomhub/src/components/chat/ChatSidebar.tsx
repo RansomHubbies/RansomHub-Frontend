@@ -161,6 +161,8 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
     setChats(updatedChats);
     setFilteredChats(updatedChats);
     setShowNewGroupModal(false);
+
+    window.location.reload();
   };
 
   const handleSelect = (chatId: string, chatName: string, isGroup: boolean) => {
@@ -187,6 +189,7 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
         console.error("Failed to add members to group:", err);
       }
       setShowGroupInfoModal(false);
+      window.location.reload();
     }
   };
 
