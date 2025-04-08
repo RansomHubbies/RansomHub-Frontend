@@ -162,7 +162,7 @@ const encryptPrivateKey = async (privateKey, password, salt) => {
             saltBase64
         }
     } catch (error) {
-        console.log("Error in encrypting Private Key:", error);
+        console.error("Error in encrypting Private Key:", error);
         throw error;
     }
 };
@@ -179,7 +179,7 @@ const decryptPrivateKey = async (encryptedPrivateKeyBase64, password, saltBase64
 
         return privateKeyRaw;
     } catch (error) {
-        console.log("Error in decrypting Private Key:", error);
+        console.error("Error in decrypting Private Key:", error);
         throw error;
     }
 
@@ -291,7 +291,6 @@ export const login = async (email, password) => {
         if (response.status === 200) {
             
             const privateKeyRaw = await decryptPrivateKey(data.encrypted_private_key, password, data.private_key_salt);
-            console.log("Private Key Raw: ", privateKeyRaw);
             const privateKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(privateKeyRaw)));
             sessionStorage.setItem(`${data.username}_private_key`, privateKeyBase64);
             localStorage.setItem("access_token", data.access_token);

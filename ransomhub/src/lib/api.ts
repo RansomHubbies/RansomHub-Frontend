@@ -18,7 +18,7 @@ export const fetchUsers = async () => {
       credentials: "include"
     });
     if (!response.ok) {
-      console.log("error:", response.json())
+      console.error("error:", response.json())
       throw new Error('Failed to fetch users');
     }
     return await response.json();
