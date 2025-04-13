@@ -155,7 +155,7 @@ export default function VerificationPage() {
                   Drag and drop or click to upload your identity proof
                 </p>
                 <p className="text-sm text-gray-500 mt-2">
-                  Accepted formats: JPEG, PNG, PDF (Max 5MB)
+                  Accepted formats: JPEG, PNG, PDF (Max 1MB)
                 </p>
               </div>
             )}
