@@ -215,7 +215,8 @@ export default function MessageInput({
                             await sendFile(loggedInUser, chatName, base64String, file.name, file.type);
                         }
                     } catch (error) {
-                        console.error("Error sending file:", error);
+                        window.alert("Error sending file. Please try again. Make sure the file size is less than 1MB.");
+                        // console.error("Error sending file:", error);
                         // You might want to show an error message in the UI
                     }
                 }

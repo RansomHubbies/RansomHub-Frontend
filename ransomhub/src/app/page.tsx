@@ -93,7 +93,7 @@ export default function Dashboard() {
         setError(response.error);
         router.push("/auth/login");
       } else {
-        console.log(response);
+        // console.log(response);
         setUsername(response.username);
         setEmail(response.email);
         setProfileImage(response.profileImage || "/default-profile.png");

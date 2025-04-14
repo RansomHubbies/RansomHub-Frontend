@@ -51,7 +51,7 @@ export default function ItemDetailPage() {
       
       try {
         const itemDetails = await fetchItemDetails(itemId);
-        console.log(itemDetails)
+        // console.log(itemDetails)
         setItem(itemDetails);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';

@@ -52,7 +52,7 @@ export default function Marketplace() {
       
       try {
         const response = await fetchMarketplaceItems(searchQuery, currentPage);
-        console.log(response);
+        // console.log(response);
 
         // Directly use the response array if it exists
         if (Array.isArray(response)) {

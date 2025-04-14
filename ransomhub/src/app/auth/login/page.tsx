@@ -22,7 +22,7 @@ export default function LoginPage() {
       if (!hasCsrfToken) {
         try {
           await getCsrfToken();
-          console.log("CSRF token cookie set");
+          // console.log("CSRF token cookie set");
         } catch (error) {
           console.error("Error setting CSRF token:", error);
         }
@@ -44,7 +44,7 @@ export default function LoginPage() {
       if (captchaVerificationResult.success) {
         // Captcha verification successful, proceed with login
         const loginResult = await login(data.email, data.password);
-        console.log("Token received:", loginResult);
+        // console.log("Token received:", loginResult);
   
         // Check if the login was successful and the access token is received
         if (loginResult.access_token) {

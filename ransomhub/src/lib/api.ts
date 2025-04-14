@@ -130,7 +130,7 @@ const retrievePrivateKey = async (username: string) => {
 
     return privateKey;
   } catch (error) {
-    console.log("Error in Retrieve Private Key: ", error, username);
+    // console.log("Error in Retrieve Private Key: ", error, username);
     throw error;
   }
 }
@@ -217,7 +217,7 @@ export const decryptMessage = async (username: string, sender: string, encrypted
 
     return decodedMessage;
   } catch (error) {
-    console.log("Error in decrypt message: ", error);
+    // console.log("Error in decrypt message: ", error);
     throw (error);
   }
 };
@@ -316,7 +316,7 @@ export const decryptGroupMessage = async (username: string, sender: string, encr
     );
     return decodedMessages;
   } catch (error) {
-    console.log("Error in decrypt group message: ", error);
+    // console.log("Error in decrypt group message: ", error);
     throw error;
   }
 };

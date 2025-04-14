@@ -127,7 +127,7 @@ export default function PaymentPage() {
     try {
       // Get the user's email from localStorage or context
       const userEmail = localStorage.getItem("otpEmail");
-      console.log(userEmail);
+      // console.log(userEmail);
       
       // Send OTP to user's email
       const result = await sendPaymentOtp(itemId, userEmail);

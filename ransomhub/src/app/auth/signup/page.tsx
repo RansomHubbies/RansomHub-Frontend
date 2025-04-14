@@ -26,7 +26,7 @@ export default function SignupPage() {
       if (captchaVerificationResult.success) {
         // Captcha verification successful, proceed with signup
         const result = await signup(data.name, data.username, data.email, data.password, data.phone);
-        console.log(result.token);
+        // console.log(result.token);
         
         if (result.email) {
           // localStorage.setItem("token", result.token);

@@ -433,7 +433,7 @@ export default function ChatWindow({ chatId, chatName, isGroup }: { chatId: stri
     if (!loggedInUser || !chatId) return;
     
     try {
-      console.log(chatId)
+      // console.log(chatId)
       // const response = await fetch(`http://127.0.0.1:8000/api/users/follow/`, {
       const response = await fetch(`https://192.168.224.74/api/users/follow/`, {
         method: "POST",
