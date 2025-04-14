@@ -2,7 +2,7 @@ import { group } from "console";
 import { convertBase64toUint8Array, decryptWithAESGCM, encryptWithAESGCM, getCSRFTokenFromCookie, openKeyDatabase } from "../app/api"
 
 // const API_URL = 'http://127.0.0.1:8000/api/'
-const API_URL = "https://192.168.2.248/api/";
+const API_URL = "https://192.168.224.74/api/";
 export const fetchUsers = async () => {
   try {
     const token = localStorage.getItem("access_token");
